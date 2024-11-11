@@ -25,7 +25,7 @@
 
 %}
 
-% Define Variables:
+%% Define Variables and Transfer Function for Yaw:
 
 m = 0.1200; % mass of robot (kg)
 R = 0.032; % radius of robot (m)
@@ -40,33 +40,15 @@ alpha = 0.024; % moment arm for the fluid jets (m)
 m_a = 2/3 * pi * R^3 * rho_w; % added mass of fluid interaction
 I_aa = 2/5 * m * R^2; % moment of intertia of robot
 
-v_e = 0.15; % Define an equilibrium point for v
+yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu)
 
-syms v v_dot % define symbolic v for velocity to find D(V) matrix
+margin(yaw_tf)
 
-M = [(m+m_a).* eye(3) ,zeros(3); zeros(3), eye(3) .* I_aa];
-D = [(-1/2 * rho_w * C_d * pi * R^2 * v) * eye(3), zeros(3);
-    zeros(3), (-8*pi*R^3*mu)*eye(3)]*v;
-
-% Linearization of Matrix D
-
-D_linear = sym(zeros(size(D)));
-
-% Loop through each element of the matrix to compute the Jacobian
-for i = 1:size(D, 1)
-    for j = 1:size(D, 2)
-        D_linear(i, j) = diff(D(i, j), v);  % Take derivative with respect to v
-    end
-end
+%% Euler Step Simulation:
 
 
-D0 = subs(D_linear, v, v_e); % Evaluate the Jacobian at the equilibrium point
-D_0 = double(D0); % Convert from symbolic to numeric matrix
 
-% have to define torque vector (mapping input to output to define tf)
-yaw_tf = yaw_transfer_func(M,D_0) % find yaw transfer function
 
-s = tf('s');
-Ks = 1 + 0.15 * s;
+%% Frequency Response Simulation (Step Response Included):
 
-freq_response(yaw_tf, Ks)
+
