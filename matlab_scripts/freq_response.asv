@@ -5,13 +5,13 @@
     
 %}
 
-function freq_plot = freq_response(tf, dt, Kp0, Ki0, Kd0)
+function freq_plot = freq_response(tf, dt, fuzzyRules, Kp0, Ki0, Kd0);
 
     frequencies = logspace(-1,2,50);
     magnitude = zeros(size(frequencies));
     phase = zeros(size(frequencies));
 
-    previous_error = 0;
+    s = tf
 
     for i = 1:length(frequencies)
         omega = frequencies(i);
@@ -22,17 +22,10 @@ function freq_plot = freq_response(tf, dt, Kp0, Ki0, Kd0)
         yaw = zeros(size(t));
         for k = 2:length(t)
             error = u(k) - yaw(k-1);
-            d_error = (error - previous_error) / dt;
-            [Kp, Ki, Kd] = fuzzyRules(Kp0, Ki0, Kd0, error, d_error);
-            s = tf('s');
-            Ks = Kp + Ki / s + Kd * s;
-            y(k) = lsim(feedback(tf*Ks,1), u, t);
-            
-            Kp0 = Kp;
-            Ki0 = Ki;
-            Kd0 = Kd;
+            d_error = error / dt;
 
-            previous_error = error;
+            
+            y(k) = lsim(feedback(tf*Ks,1), u, t);
         end
 
         yaw_ss = yaw(end-100:end);

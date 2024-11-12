@@ -11,7 +11,23 @@
 
     This code uses matlab's symbolic tool to solve for the transfer
     function of yaw by applying linear algebra and previous knowns about
-    how the positional inputs and output vectors coeincide with 
+    how the positional inputs and output vectors coincide with 
+
+    Inputs:
+        - float: m  (mass of robot in kg)
+        - float: R (radius of robot in m)
+        - float: C_d (Reynolds number for a spherical body)
+        - int: rho_w (density of water in kg/m^3)
+        - float: mu (fluid viscosity in Pa)
+        - int: a (degree of actuators positioning)
+        - float: alpha (moment arm for the fluid jets in m)
+        - float: m_a (added mass of fluid interaction)
+        - float: I_aa (moment of intertia of robot)
+
+    Output:
+        - tf: yaw_tf (transfer function of yaw with respect to given
+        parameters)
+
 %}
 
 function yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu)

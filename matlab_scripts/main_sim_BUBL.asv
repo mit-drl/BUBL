@@ -25,7 +25,14 @@
 
 %}
 
-% Define Variables:
+%% Define Folder Location for File Saving
+plotFolder = 'generated_plots';
+
+if ~exist(plotFolder, 'dir')
+    mkdir(plotFolder);
+end
+
+%% Define Variables and Transfer Function for Yaw:
 
 m = 0.1200; % mass of robot (kg)
 R = 0.032; % radius of robot (m)
@@ -40,48 +47,39 @@ alpha = 0.024; % moment arm for the fluid jets (m)
 m_a = 2/3 * pi * R^3 * rho_w; % added mass of fluid interaction
 I_aa = 2/5 * m * R^2; % moment of intertia of robot
 
-syms v_x v_y v_z v_dot % define symbolic v for velocity to find D(V) matrix
+yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu)
 
-M = [(m+m_a).* eye(3) ,zeros(3); zeros(3), eye(3) .* I_aa];
-D = [(-1/2 * rho_w * C_d * pi * R^2) * [v_x, 0, 0; 0, v_y, 0; 0,v_z, 0] * eye(3), zeros(3);
-    zeros(3), (-8*pi*R^3*mu)*eye(3)];
+%% Define Initial Kp, Ki, Kd values
 
-syms x y z phi theta psi
-syms x_dot y_dot z_dot phi_dot theta_dot psi_dot
+% Determined via step response
+Kp0 = 5;
+Ki0 = 1;
+Kd0 = 0.5;
 
-R = [cos(psi) * cos(theta), sin(psi)*cos(theta), -sin(theta);
-    -sin(psi) * cos(phi) + cos(psi) * sin(theta)*sin(phi), cos(psi) * cos(phi) + sin(psi) * sin(theta) * sin(phi), sin(phi) * cos(theta);
-    sin(psi) * sin(phi) + cos(psi) * sin(theta) * cos(phi), -cos(psi) * sin(phi) + sin(psi) * sin(theta) * cos(phi), cos(phi) * cos(theta)];
+%% Finding Initial Kp, Ki, Kd values
 
-J = [1, 0, -sin(theta); 
-     0, cos(phi), cos(theta) * sin(phi);
-     0, -sin(phi), cos(theta) * cos(phi)];
+s = tf('s');
+Ks = Kp0;
 
-eta = [x_dot; y_dot; z_dot; phi_dot; theta_dot; psi_dot];
+step(feedback(yaw_tf * Ks, 1))
 
-v_vector = [R, zeros(3); zeros(3), J] * eta;
+%% Euler Step Simulation:
 
-syms x_d_dot y_d_dot z_d_dot phi_d_dot theta_d_dot psi_d_dot
+% Define initial conditions/state
+dt = 0.001;
+time_final = 10;
+yaw_0 = [-pi/4, pi/2, 0, 0];
 
-v_dot_vector = [x_d_dot; y_d_dot; z_d_dot; phi_d_dot; theta_d_dot; psi_d_dot];
+euler_plots = euler_simulation(tf,dt,time_final, yaw_0, fuzzyRules);
 
-eqn = M * v_dot_vector + D * v_vector;
-eqn = subs(eqn, {v_x, v_y, v_z}, {v_vector(1), v_vector(2), v_vector(3)});
-eqn = subs(eqn, {phi, theta, phi_dot, theta_dot, phi_d_dot, theta_d_dot}, {0,0,0,0,0,0});
+% saves plot output to selected folder (can comment out if not needed)
+euler_plot_file = fullfile(plotFolder, 'euler_model_plot.png');
+saveas(euler_plots, euler_plot_file);
 
-yaw_eqn = eqn(6);
+%% Frequency Response Simulation (Step Response Included):
 
-sympref('FloatingPointOutput',true);
+freq_plot = freq_response(yaw_tf, fuzzyRules);
 
-syms s
-
-psi_d_dot_laplace = s^2;   
-psi_dot_laplace = s;    
-
-yaw_eqn_laplace = subs(yaw_eqn, {psi_d_dot, psi_dot}, {psi_d_dot_laplace, psi_dot_laplace})
-
-
-num = [1]
-
-sym2poly(yaw_eqn_laplace)
-denom = coeffs(yaw_eqn_laplace, s, 'All')
+% saves plot output to selected folder (can comment out if not needed)
+freq_response_plot_file = fullfile(plotFolder, 'freq_response_plots.png');
+saveas(freq_plot, freq_response_plot_file);

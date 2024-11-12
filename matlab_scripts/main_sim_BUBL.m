@@ -25,6 +25,13 @@
 
 %}
 
+%% Define Folder Location for File Saving
+plotFolder = 'generated_plots';
+
+if ~exist(plotFolder, 'dir')
+    mkdir(plotFolder);
+end
+
 %% Define Variables and Transfer Function for Yaw:
 
 m = 0.1200; % mass of robot (kg)
@@ -42,13 +49,49 @@ I_aa = 2/5 * m * R^2; % moment of intertia of robot
 
 yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu)
 
+%% Define Initial Kp, Ki, Kd values
+
+% Determined via step response
+Kp0 = 12;
+Ki0 = 0.25;
+Kd0 = 0.075;
+
+%% Finding Initial Kp, Ki, Kd values
+close;
+
+s = tf('s');
+Ks = Kp0 + Ki0 / s + Kd0 * s;
+
+figure(1);
+step(feedback(yaw_tf * Ks, 1))
+
+figure(2);
+hold on
 margin(yaw_tf)
+margin(Ks)
+margin(yaw_tf * Ks)
+hold off
 
 %% Euler Step Simulation:
 
+% Define initial conditions/state
+dt = 0.001;
+time_final = 10;
+desired_yaw = 180;
 
+euler_plots = euler_simulation(yaw_tf,dt,time_final, Kp0, Ki0, Kd0, desired_yaw);
 
+% saves plot output to selected folder (can comment out if not needed)
+euler_plot_file = fullfile(plotFolder, 'euler_model_plot.png');
+saveas(euler_plots, euler_plot_file);
 
 %% Frequency Response Simulation (Step Response Included):
 
+% Define initial conditions/state
+dt = 0.01;
 
+freq_plot = freq_response(yaw_tf, dt, Kp0, Ki0, Kd0);
+
+% saves plot output to selected folder (can comment out if not needed)
+freq_response_plot_file = fullfile(plotFolder, 'freq_response_plots.png');
+saveas(freq_plot, freq_response_plot_file);
