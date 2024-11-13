@@ -8,15 +8,31 @@
             - float: e_dot (change in error of desired yaw angle vs actual yaw angle)
 
         Output:
-            - float:
-            - float:
-            - float:
+            - float: Kp (Proportional Gain)
+            - float: Ki (Integral Gain)
+            - float: Kd (Derivative Gain)
 
     function fuzzyKpFIS():
+        Inputs:
+            - float: E (normalized error)
+            - float: E_c (normalized change in error)
+        Output:
+            - float: Kp (fuzzified proportional gain [0,1] range in value)
 
     function fuzzyKiFIS():
+        Inputs:
+            - float: E (normalized error)
+            - float: E_c (normalized change in error)
+        Output:
+            - float: Ki (fuzzified integral gain [0,1] range in value)
 
     function fuzzyKd FIS():
+        Inputs:
+            - float: E (normalized error)
+            - float: E_c (normalized change in error)
+        Output:
+            - float: Kd (fuzzified derivative gain [0,1] range in value)
+
 
 %}
 
@@ -24,9 +40,9 @@ function [Kp,Ki,Kd] = fuzzyRules(Kp0, Ki0, Kd0, e, e_dot)
     
     D = 0.5;
 
-    E = mod(e,360);
-    E = E / 360;
-    E_c = e_dot/6.25;
+    E = float(mod(e,360));
+    E = E / 360.00; % meant to normalize yaw error to between [-1,1]
+    E_c = e_dot/6.25; % meant to normalize change in yaw error to between [-1,1]
     
     Kp_fis = fuzzyKpFIS();
     delta_Kp = evalfis([E,E_c], Kp_fis);
@@ -53,7 +69,7 @@ function Kp_fis = fuzzyKpFIS()
     
     names = {'NB', 'NM', 'NS', 'ZO', 'PS', 'PM', 'PB'};
     ranges = [-1 -0.5 -0.2 0 0.2 0.5 1]; 
-    
+        
     for i = 1:length(names)
         if i == 1
             Kp_fis = addMF(Kp_fis, 'E', 'trapmf', [ranges(i) ranges(i) ranges(i+1) ranges(i+2)], 'Name', names{i});
@@ -68,7 +84,13 @@ function Kp_fis = fuzzyKpFIS()
     end
     
     for i = 1:length(names)
-        Kp_fis = addMF(Kp_fis, 'Kp', 'trimf', [max(0, i-2)*0.15, (i-1)*0.15, min(1, i)*0.15], 'Name', names{i});
+        a = max(0, (i - 2) * 0.15);
+        b = (i - 1) * 0.15;
+        c = min(1, i) * 0.15;
+
+        sorted_points = sort([a, b, c]);
+
+        Kp_fis = addMF(Kp_fis, 'Kp', 'trimf', sorted_points, 'Name', names{i});
     end
 
     rules = [
@@ -155,10 +177,15 @@ function Ki_fis = fuzzyKiFIS()
             Ki_fis = addMF(Ki_fis, 'E', 'trimf', [ranges(i-1) ranges(i) ranges(i+1)], 'Name', names{i});
             Ki_fis = addMF(Ki_fis, 'Ec', 'trimf', [ranges(i-1) ranges(i) ranges(i+1)], 'Name', names{i});
         end
-    end
+    end    
     
     for i = 1:length(names)
-        Ki_fis = addMF(Ki_fis, 'Ki', 'trimf', [max(0, i-2)*0.1, (i-1)*0.1, min(1, i)*0.1], 'Name', names{i});
+        a = max(0, i - 2) * 0.15;
+        b = (i - 1) * 0.1;
+        c = min(1,i) * 0.1;
+        sorted_points = sort([a,b,c]);
+
+        Ki_fis = addMF(Ki_fis, 'Ki', 'trimf', sorted_points, 'Name', names{i});
     end
     
     rules = [
@@ -202,7 +229,12 @@ function Kd_fis = fuzzyKdFIS()
     end
     
     for i = 1:length(names)
-        Kd_fis = addMF(Kd_fis, 'Kd', 'trimf', [max(0, i-2)*0.05, (i-1)*0.05, min(1, i)*0.05], 'Name', names{i});
+        a = max(0, i - 2) * 0.05;
+        b = (i - 1) * 0.05;
+        c = min(1,i) * 0.05;
+        sorted_points = sort([a,b,c]);
+
+        Kd_fis = addMF(Kd_fis, 'Kd', 'trimf', sorted_points, 'Name', names{i});
     end
     
     rules = [

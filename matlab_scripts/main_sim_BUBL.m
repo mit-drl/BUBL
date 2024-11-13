@@ -41,30 +41,29 @@ C_d = 0.5; % approximate value (Reynolds number for spherical body)
 rho_w = 997; % density of water (kg/m^3)
 mu = 10^(-3); % fluid viscosity (Pa)
 
-a = 20; % degree selected to provide minimum sufficient dive thrust
+a = 20 * pi/180; % degree selected to provide minimum sufficient dive thrust
 alpha = 0.024; % moment arm for the fluid jets (m)
 
 m_a = 2/3 * pi * R^3 * rho_w; % added mass of fluid interaction
 I_aa = 2/5 * m * R^2; % moment of intertia of robot
 
-yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu)
+yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu, alpha, a)
 
 %% Define Initial Kp, Ki, Kd values
 
 % Determined via step response
-Kp0 = 12;
-Ki0 = 0.25;
-Kd0 = 0.075;
+Kp0 = 16;
+Ki0 = 9;
+Kd0 = 0.25;
 
 %% Finding Initial Kp, Ki, Kd values
-close;
-
 s = tf('s');
 Ks = Kp0 + Ki0 / s + Kd0 * s;
 
 figure(1);
 step(feedback(yaw_tf * Ks, 1))
 
+hold off
 figure(2);
 hold on
 margin(yaw_tf)
