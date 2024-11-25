@@ -22,17 +22,9 @@
 
     From our assumptions the equation becomes:
         Mv_dot + D(v)v = tau
-
 %}
 
-%% Define Folder Location for File Saving
-plotFolder = 'generated_plots';
-
-if ~exist(plotFolder, 'dir')
-    mkdir(plotFolder);
-end
-
-%% Define Variables and Transfer Function for Yaw:
+%% Define Variables and Transfer Function for Yaw
 
 m = 0.1200; % mass of robot (kg)
 R = 0.032; % radius of robot (m)
@@ -44,53 +36,32 @@ mu = 10^(-3); % fluid viscosity (Pa)
 a = 20 * pi/180; % degree selected to provide minimum sufficient dive thrust
 alpha = 0.024; % moment arm for the fluid jets (m)
 
+% define the actuation matrix
+B = [cos(a), -cos(a), cos(a), -cos(a);
+     zeros(1,4);
+     sin(a), sin(a), sin(a), sin(a);
+     -alpha * sin(a), -alpha * sin(a), alpha * sin(a), alpha * sin(a);
+     zeros(1,4);
+     -alpha * cos(a), alpha * cos(a), alpha * cos(a), -alpha * cos(a)];
+
 m_a = 2/3 * pi * R^3 * rho_w; % added mass of fluid interaction
 I_aa = 2/5 * m * R^2; % moment of intertia of robot
 
-yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu, alpha, a)
+yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu, B)
 
 %% Define Initial Kp, Ki, Kd values
 
-% Determined via step response
-Kp0 = 16;
-Ki0 = 9;
-Kd0 = 0.25;
+% Established by Pascal previously
+Kp0 = 12;
+Kd0 = 9;
 
-%% Finding Initial Kp, Ki, Kd values
-s = tf('s');
-Ks = Kp0 + Ki0 / s + Kd0 * s;
+%% Simulate Step Response of PID and Fuzzy PID:
 
-figure(1);
-step(feedback(yaw_tf * Ks, 1))
+input_type = "sin"; % define as square or sin
+step_response(yaw_tf, input_type, Kp0, Kd0)
 
-hold off
-figure(2);
-hold on
-margin(yaw_tf)
-margin(Ks)
-margin(yaw_tf * Ks)
-hold off
+%% Simulate Disturbance Based Step Response:
 
-%% Euler Step Simulation:
-
-% Define initial conditions/state
-dt = 0.001;
-time_final = 10;
-desired_yaw = 180;
-
-euler_plots = euler_simulation(yaw_tf,dt,time_final, Kp0, Ki0, Kd0, desired_yaw);
-
-% saves plot output to selected folder (can comment out if not needed)
-euler_plot_file = fullfile(plotFolder, 'euler_model_plot.png');
-saveas(euler_plots, euler_plot_file);
-
-%% Frequency Response Simulation (Step Response Included):
-
-% Define initial conditions/state
-dt = 0.01;
-
-freq_plot = freq_response(yaw_tf, dt, Kp0, Ki0, Kd0);
-
-% saves plot output to selected folder (can comment out if not needed)
-freq_response_plot_file = fullfile(plotFolder, 'freq_response_plots.png');
-saveas(freq_plot, freq_response_plot_file);
+input_type = "line"; % can define input_type as line
+dist_type = "instant"; % define as sin or instant
+disturbance_response(yaw_tf, input_type, dist_type, Kp0, Kd0)

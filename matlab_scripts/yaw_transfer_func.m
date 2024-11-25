@@ -30,7 +30,7 @@
 
 %}
 
-function yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu, alpha, a)
+function yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu, B)
 
     syms v_x v_y v_z % define symbolic v for velocity to find D(V) matrix
 
@@ -80,7 +80,7 @@ function yaw_tf = yaw_transfer_func(m,m_a,rho_w,C_d,R, I_aa, mu, alpha, a)
     yaw_eqn_laplace = subs(yaw_eqn, {psi_d_dot, psi_dot}, {psi_d_dot_laplace, psi_dot_laplace});
 
     % numerator from input forces
-    num = alpha * cos(a);
+    num = abs(B(6,1));
     % denominator is the laplace transform of the yaw based expression
     denom = sym2poly(yaw_eqn_laplace);
 

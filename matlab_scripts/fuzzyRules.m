@@ -36,25 +36,22 @@
 
 %}
 
-function [Kp,Ki,Kd] = fuzzyRules(Kp0, Ki0, Kd0, e, e_dot)
+function [Kp,Kd] = fuzzyRules(Kp0, Kd0, e, e_dot)
     
     D = 0.5;
 
-    E = float(mod(e,360));
-    E = E / 360.00; % meant to normalize yaw error to between [-1,1]
-    E_c = e_dot/6.25; % meant to normalize change in yaw error to between [-1,1]
+    E = double(mod(e,360));
+    E = E / 360; % meant to normalize yaw error to between [-1,1]
+    % established to be ~2 revolutions/s ~= 12.56 rad/s
+    E_c = e_dot/720; % meant to normalize change in yaw error to between [-1,1]
     
     Kp_fis = fuzzyKpFIS();
-    delta_Kp = evalfis([E,E_c], Kp_fis);
-
-    Ki_fis = fuzzyKiFIS();
-    delta_Ki = evalfis([E,E_c], Ki_fis);
+    delta_Kp = evalfis(Kp_fis, [E,E_c]);
 
     Kd_fis = fuzzyKdFIS();
-    delta_Kd = evalfis([E,E_c], Kd_fis);
+    delta_Kd = evalfis(Kd_fis, [E,E_c]);
     
     Kp = Kp0 + D * delta_Kp;
-    Ki = Ki0 + D * delta_Ki;
     Kd = Kd0 + D * delta_Kd;
 
 end
@@ -92,7 +89,7 @@ function Kp_fis = fuzzyKpFIS()
 
         Kp_fis = addMF(Kp_fis, 'Kp', 'trimf', sorted_points, 'Name', names{i});
     end
-
+    
     rules = [
         1 1 1 1 1; % If E is NB and Ec is NB, then Kp is NB
         1 2 1 1 1; % If E is NB and Ec is NM, then Kp is NB
@@ -154,66 +151,16 @@ function Kp_fis = fuzzyKpFIS()
     Kp_fis = addRule(Kp_fis, rules);
 end
 
-
-function Ki_fis = fuzzyKiFIS()
-    Ki_fis = mamfis('Name', 'KiController');
-    
-    Ki_fis = addInput(Ki_fis, [-1 1], 'Name', 'E');
-    Ki_fis = addInput(Ki_fis, [-1 1], 'Name', 'Ec');
-    
-    Ki_fis = addOutput(Ki_fis, [0 1], 'Name', 'Ki');
-    
-    names = {'NB', 'NM', 'NS', 'ZO', 'PS', 'PM', 'PB'};
-    ranges = [-1 -0.3 -0.2 0 0.2 0.3 1];
-    
-    for i = 1:length(names)
-        if i == 1
-            Ki_fis = addMF(Ki_fis, 'E', 'trapmf', [ranges(i) ranges(i) ranges(i+1) ranges(i+2)], 'Name', names{i});
-            Ki_fis = addMF(Ki_fis, 'Ec', 'trapmf', [ranges(i) ranges(i) ranges(i+1) ranges(i+2)], 'Name', names{i});
-        elseif i == length(names)
-            Ki_fis = addMF(Ki_fis, 'E', 'trapmf', [ranges(i-1) ranges(i) ranges(i) ranges(i)], 'Name', names{i});
-            Ki_fis = addMF(Ki_fis, 'Ec', 'trapmf', [ranges(i-1) ranges(i) ranges(i) ranges(i)], 'Name', names{i});
-        else
-            Ki_fis = addMF(Ki_fis, 'E', 'trimf', [ranges(i-1) ranges(i) ranges(i+1)], 'Name', names{i});
-            Ki_fis = addMF(Ki_fis, 'Ec', 'trimf', [ranges(i-1) ranges(i) ranges(i+1)], 'Name', names{i});
-        end
-    end    
-    
-    for i = 1:length(names)
-        a = max(0, i - 2) * 0.15;
-        b = (i - 1) * 0.1;
-        c = min(1,i) * 0.1;
-        sorted_points = sort([a,b,c]);
-
-        Ki_fis = addMF(Ki_fis, 'Ki', 'trimf', sorted_points, 'Name', names{i});
-    end
-    
-    rules = [
-        1 1 1 1 1;  % NB E, NB Ec -> NB Ki (strong negative response)
-        1 2 1 1 1;  % NB E, NM Ec -> NB Ki (strong negative response)
-        2 1 2 1 1;  % NM E, NB Ec -> NM Ki (slightly negative response)
-        3 3 4 1 1;  % NS E, NS Ec -> ZO Ki (neutral response)
-        4 4 4 1 1;  % ZO E, ZO Ec -> ZO Ki (neutral response)
-        5 5 6 1 1;  % PS E, PS Ec -> PM Ki (positive response)
-        6 6 7 1 1;  % PM E, PM Ec -> PB Ki (strong positive response)
-        7 7 7 1 1;  % PB E, PB Ec -> PB Ki (strong positive response)
-    ];
-
-    Ki_fis = addRule(Ki_fis, rules);
-end
-
-
-
 function Kd_fis = fuzzyKdFIS()
-    Kd_fis = mamfis('Name', 'KdController');
+    Kd_fis = mamfis('Name', 'KpController');
     
     Kd_fis = addInput(Kd_fis, [-1 1], 'Name', 'E');
     Kd_fis = addInput(Kd_fis, [-1 1], 'Name', 'Ec');
     
     Kd_fis = addOutput(Kd_fis, [0 1], 'Name', 'Kd');
     
-    names = {'NB', 'NM', 'NS', 'ZO', 'PS', 'PM', 'PB'};
-    ranges = [-1 -0.6 -0.3 0 0.3 0.6 1];
+    names = {'NB', 'NM', 'PS', 'ZO', 'NS', 'PM', 'PB'};
+    ranges = [-1 -0.1 -0.05 0 0.05 0.1 1];
     
     for i = 1:length(names)
         if i == 1
@@ -238,15 +185,63 @@ function Kd_fis = fuzzyKdFIS()
     end
     
     rules = [
-        1 1 3 1 1;  % NB E, NB Ec -> NS Kd (slightly negative differential action)
-        1 2 2 1 1;  % NB E, NM Ec -> NM Kd (moderate low differential action)
-        1 3 1 1 1;  % NB E, NS Ec -> NB Kd (strongly reduce differential action)
-        3 3 4 1 1;  % NS E, NS Ec -> ZO Kd (neutral Kd)
-        4 4 5 1 1;  % ZO E, ZO Ec -> PS Kd (positive differential action)
-        5 5 6 1 1;  % PS E, PS Ec -> PM Kd (moderate positive differential action)
-        6 6 7 1 1;  % PM E, PM Ec -> PB Kd (strong positive differential action)
-        7 7 7 1 1;  % PB E, PB Ec -> PB Kd (strong positive differential action)
+        1, 1, 1, 1, 1; % If E is NB and Ec is NB, then Kd is NB
+        1, 2, 1, 1, 1; % If E is NB and Ec is NM, then Kd is NB
+        1, 3, 2, 1, 1; % If E is NB and Ec is NS, then Kd is NM
+        1, 4, 2, 1, 1; % If E is NB and Ec is ZO, then Kd is NM
+        1, 5, 3, 1, 1; % If E is NB and Ec is PS, then Kd is NS
+        1, 6, 3, 1, 1; % If E is NB and Ec is PM, then Kd is NS
+        1, 7, 4, 1, 1; % If E is NB and Ec is PB, then Kd is ZO
+
+        2, 1, 1, 1, 1; % If E is NM and Ec is NB, then Kd is NB
+        2, 2, 2, 1, 1; % If E is NM and Ec is NM, then Kd is NM
+        2, 3, 2, 1, 1; % If E is NM and Ec is NS, then Kd is NM
+        2, 4, 3, 1, 1; % If E is NM and Ec is ZO, then Kd is NS
+        2, 5, 3, 1, 1; % If E is NM and Ec is PS, then Kd is NS
+        2, 6, 4, 1, 1; % If E is NM and Ec is PM, then Kd is ZO
+        2, 7, 4, 1, 1; % If E is NM and Ec is PB, then Kd is ZO
+    
+        3, 1, 2, 1, 1; % If E is NS and Ec is NB, then Kd is NM
+        3, 2, 2, 1, 1; % If E is NS and Ec is NM, then Kd is NM
+        3, 3, 3, 1, 1; % If E is NS and Ec is NS, then Kd is NS
+        3, 4, 3, 1, 1; % If E is NS and Ec is ZO, then Kd is NS
+        3, 5, 4, 1, 1; % If E is NS and Ec is PS, then Kd is ZO
+        3, 6, 4, 1, 1; % If E is NS and Ec is PM, then Kd is ZO
+        3, 7, 5, 1, 1; % If E is NS and Ec is PB, then Kd is PS
+    
+        4, 1, 2, 1, 1; % If E is ZO and Ec is NB, then Kd is NM
+        4, 2, 3, 1, 1; % If E is ZO and Ec is NM, then Kd is NS
+        4, 3, 3, 1, 1; % If E is ZO and Ec is NS, then Kd is NS
+        4, 4, 4, 1, 1; % If E is ZO and Ec is ZO, then Kd is ZO
+        4, 5, 4, 1, 1; % If E is ZO and Ec is PS, then Kd is ZO
+        4, 6, 5, 1, 1; % If E is ZO and Ec is PM, then Kd is PS
+        4, 7, 5, 1, 1; % If E is ZO and Ec is PB, then Kd is PS
+    
+        5, 1, 3, 1, 1; % If E is PS and Ec is NB, then Kd is NS
+        5, 2, 3, 1, 1; % If E is PS and Ec is NM, then Kd is NS
+        5, 3, 4, 1, 1; % If E is PS and Ec is NS, then Kd is ZO
+        5, 4, 4, 1, 1; % If E is PS and Ec is ZO, then Kd is ZO
+        5, 5, 5, 1, 1; % If E is PS and Ec is PS, then Kd is PS
+        5, 6, 5, 1, 1; % If E is PS and Ec is PM, then Kd is PS
+        5, 7, 6, 1, 1; % If E is PS and Ec is PB, then Kd is PM
+    
+        6, 1, 3, 1, 1; % If E is PM and Ec is NB, then Kd is NS
+        6, 2, 4, 1, 1; % If E is PM and Ec is NM, then Kd is ZO
+        6, 3, 4, 1, 1; % If E is PM and Ec is NS, then Kd is ZO
+        6, 4, 5, 1, 1; % If E is PM and Ec is ZO, then Kd is PS
+        6, 5, 5, 1, 1; % If E is PM and Ec is PS, then Kd is PS
+        6, 6, 6, 1, 1; % If E is PM and Ec is PM, then Kd is PM
+        6, 7, 6, 1, 1; % If E is PM and Ec is PB, then Kd is PM
+    
+        7, 1, 4, 1, 1; % If E is PB and Ec is NB, then Kd is ZO
+        7, 2, 4, 1, 1; % If E is PB and Ec is NM, then Kd is ZO
+        7, 3, 5, 1, 1; % If E is PB and Ec is NS, then Kd is PS
+        7, 4, 5, 1, 1; % If E is PB and Ec is ZO, then Kd is PS
+        7, 5, 6, 1, 1; % If E is PB and Ec is PS, then Kd is PM
+        7, 6, 6, 1, 1; % If E is PB and Ec is PM, then Kd is PM
+        7, 7, 7, 1, 1; % If E is PB and Ec is PB, then Kd is PB
     ];
 
+    % Add rules to the FIS
     Kd_fis = addRule(Kd_fis, rules);
 end

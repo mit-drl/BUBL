@@ -258,6 +258,11 @@ void loop() {
 //  u[2] = Kp_depth * depth_error - Kd_depth * depth_error_dot + dive_thrust;   // depth control signal   (DoF #3)  [unit moment, 0-400]
 //  u[3] = Kp_roll * roll_error   + Kd_roll * roll_error_dot;                   // roll control signal    (DoF #4)  [unit thrust, 0-400]
 
+  // finding the Kp_yaw and Kd_yaw from fuzzy logic functions
+  k = fuzzyPID(yaw_error, yaw_error_dot);
+  Kp_yaw += k[0];
+  Kd_yaw += k[1];
+
   u[0] = thrust_desired;                                                      // forward control signal (DoF #1)  [unit thrust, 0-400]
   u[1] = Kp_yaw * yaw_error     + Kd_yaw * yaw_error_dot                   + Ki_yaw * yaw_error_int;        // yaw control signal     (DoF #2)  [unit moment, 0-1000]
   u[2] = Kp_depth * depth_error - Kd_depth * depth_error_dot + dive_thrust + Ki_depth * depth_error_int;    // depth control signal   (DoF #3)  [unit moment, 0-1000]
@@ -595,25 +600,25 @@ void interpretMessage(void)
   }
 }
 
-int[] fuzzyPID(e, e_c):
+float[] fuzzyPID(e, e_c):
   // e is defined as the angle error (yaw in this sample case)
   // e_c is defined as the rate of change of the error
   // this function is meant to transform the e,e_c values into the blurring variables E, E_c (serving as the input to the fuzzy controller)
   
-  E = e / e_max; // ranges from [-1, 1]
-  E_c = e_c / e_c_max; // ranges from [-1, 1]
+  E = e / 360; // ranges from [-1, 1]
+  E_c = e_c / 720; // ranges from [-1, 1]
 
-  k_vals = [0, 0, 0]; // Initialize kP, kI, kD values
+  k_vals = [0, 0]; // Initialize kP, kI, kD values
 
   // Iterate through kP, kI, kD calculations
-  for (int i = 1; i < 4; i++) {
+  for (int i = 1; i < 3; i++) {
     k_vals[i - 1] = fuzzyPIDLogic(i, E, E_c);
   }
 
   return k_vals; // Return the calculated PID values
 
 
-int fuzzyPIDLogic(k_instance, E, E_c):
+float fuzzyPIDLogic(k_instance, E, E_c):
   // Establish thresholds for fuzzy rules
   fuzzy_logic_interp = ""; // String to capture Fuzzy Rule: NB, NM, NS, ZO, PS, PM, PB
   output = 0; // Initialize output for the fuzzy rule
@@ -642,21 +647,6 @@ int fuzzyPIDLogic(k_instance, E, E_c):
       fuzzy_logic_interp = "PM"; // Positive Medium
       output = 1; // Output for PM
     } else if (E_c < 0.5) {
-      fuzzy_logic_interp = "ZO"; // Zero
-      output = 0; // Output for ZO
-    } else {
-      fuzzy_logic_interp = "NB"; // Negative Big
-      output = -2; // Output for NB
-    }
-  }
-  else { // kI calculation
-    if (E < -0.5) {
-      fuzzy_logic_interp = "PB"; // Positive Big
-      output = 2; // Output for PB
-    } else if (E < 0) {
-      fuzzy_logic_interp = "PM"; // Positive Medium
-      output = 1; // Output for PM
-    } else if (E < 0.5) {
       fuzzy_logic_interp = "ZO"; // Zero
       output = 0; // Output for ZO
     } else {
