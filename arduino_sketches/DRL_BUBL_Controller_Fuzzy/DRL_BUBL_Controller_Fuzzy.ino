@@ -144,6 +144,17 @@ Matrix<4,4> A;
 float sin_th = sin(rot);
 float cos_th = cos(rot);
 
+#define D 0.5
+#define MAX_KP 1.0
+#define MIN_KP 0.0
+#define MAX_KD 1.0
+#define MIN_KD 0.0
+
+float fuzzyKp(float e, float e_dot);
+float fuzzyKd(float e, float e_dot);
+float membershipFunction(float x, float a, float b, float c);
+float defuzzify(float *mf_values, float *mf_outputs, int num_rules);
+
 void setup() {
   
   Serial.begin(115200);
@@ -259,9 +270,8 @@ void loop() {
 //  u[3] = Kp_roll * roll_error   + Kd_roll * roll_error_dot;                   // roll control signal    (DoF #4)  [unit thrust, 0-400]
 
   // finding the Kp_yaw and Kd_yaw from fuzzy logic functions
-  k = fuzzyPID(yaw_error, yaw_error_dot);
-  Kp_yaw += k[0];
-  Kd_yaw += k[1];
+  Kp_yaw += (D * fuzzyKp(e, e_dot));
+  Kd_yaw += (D * fuzzyKd(e, e_dot));
 
   u[0] = thrust_desired;                                                      // forward control signal (DoF #1)  [unit thrust, 0-400]
   u[1] = Kp_yaw * yaw_error     + Kd_yaw * yaw_error_dot                   + Ki_yaw * yaw_error_int;        // yaw control signal     (DoF #2)  [unit moment, 0-1000]
@@ -625,39 +635,201 @@ float fuzzyPIDLogic(k_instance, E, E_c):
 
   // Define membership values for error (E) and change of error (E_c)
   if (k_instance == 1) { // kP calculation
-    if (E < -0.5) {
-      fuzzy_logic_interp = "PB"; // Positive Big
-      output = 2; // Output for PB
-    } else if (E < 0) {
-      fuzzy_logic_interp = "PM"; // Positive Medium
-      output = 1; // Output for PM
-    } else if (E < 0.5) {
-      fuzzy_logic_interp = "ZO"; // Zero
-      output = 0; // Output for ZO
-    } else {
-      fuzzy_logic_interp = "NB"; // Negative Big
-      output = -2; // Output for NB
-    }
+
   }
   else if (k_instance == 2) { // kD calculation
-    if (E_c < -0.5) {
-      fuzzy_logic_interp = "PB"; // Positive Big
-      output = 2; // Output for PB
-    } else if (E_c < 0) {
-      fuzzy_logic_interp = "PM"; // Positive Medium
-      output = 1; // Output for PM
-    } else if (E_c < 0.5) {
-      fuzzy_logic_interp = "ZO"; // Zero
-      output = 0; // Output for ZO
-    } else {
-      fuzzy_logic_interp = "NB"; // Negative Big
-      output = -2; // Output for NB
-    }
+
   }
 
   return output; // Return the calculated output for kP, kI, or kD
 
+// Defuzzification method using the center of gravity (COG)
+float defuzzify(float *mf_values, float *mf_outputs, int num_rules) {
+  float numerator = 0;
+  float denominator = 0;
+  
+  // Sum up the numerator and denominator
+  for (int i = 0; i < num_rules; i++) {
+    numerator += mf_values[i] * mf_outputs[i];
+    denominator += mf_values[i];
+  }
 
+  // Return the crisp value
+  if (denominator != 0) {
+    return numerator / denominator;
+  }
+  return 0.0;
+}
+
+// Function to compute the membership of a value for a given triangle fuzzy set
+float membershipFunction(float x, float a, float b, float c) {
+  if (x <= a || x >= c) {
+    return 0.0;  // Outside the range of the triangle
+  } else if (x > a && x <= b) {
+    return (x - a) / (b - a);  // Rising edge of the triangle
+  } else if (x > b && x < c) {
+    return (c - x) / (c - b);  // Falling edge of the triangle
+  }
+  return 0.0;
+}
+
+// Function to compute Kp based on fuzzy logic
+float fuzzyKp(float e, float e_dot) {
+  // Normalize inputs to the range [-1, 1]
+  e = constrain(e, -180, 180) / 180;    // Normalize Error (e) to [-1, 1]
+  e_dot = constrain(e_dot, -180, 180) / 180; // Normalize Change in Error (e_dot) to [-1, 1]
+
+  // Membership values for error (E) and change in error (Ec)
+  float E_mf[7];  // Membership values for E
+  float Ec_mf[7]; // Membership values for Ec
+  
+  // Compute the membership values for E (Error)
+  E_mf[0] = membershipFunction(e, -1.0, -0.5, 0.0);  // NB
+  E_mf[1] = membershipFunction(e, -0.5, 0.0, 0.5);   // NM
+  E_mf[2] = membershipFunction(e, 0.0, 0.5, 1.0);    // NS
+  E_mf[3] = membershipFunction(e, -0.2, 0.0, 0.2);   // ZO
+  E_mf[4] = membershipFunction(e, 0.0, 0.5, 1.0);    // PS
+  E_mf[5] = membershipFunction(e, 0.5, 1.0, 1.5);    // PM
+  E_mf[6] = membershipFunction(e, 1.0, 1.5, 2.0);    // PB
+
+  // Compute the membership values for Ec (Change in error)
+  Ec_mf[0] = membershipFunction(e_dot, -1.0, -0.5, 0.0);  // NB
+  Ec_mf[1] = membershipFunction(e_dot, -0.5, 0.0, 0.5);   // NM
+  Ec_mf[2] = membershipFunction(e_dot, 0.0, 0.5, 1.0);    // NS
+  Ec_mf[3] = membershipFunction(e_dot, -0.2, 0.0, 0.2);   // ZO
+  Ec_mf[4] = membershipFunction(e_dot, 0.0, 0.5, 1.0);    // PS
+  Ec_mf[5] = membershipFunction(e_dot, 0.5, 1.0, 1.5);    // PM
+  Ec_mf[6] = membershipFunction(e_dot, 1.0, 1.5, 2.0);    // PB
+
+  // Fuzzy rule outputs (these are Kp values associated with each rule)
+  float rule_outputs[7] = {-1.0, -0.8, -0.5, 0.0, 0.5, 0.8, 1.0};  // Rule outputs for Kp
+  
+  // Fuzzy rule membership values
+  float rule_mfs[NUM_RULES];  // The membership values for the fuzzy rules
+  float output_values[NUM_RULES];  // The output values corresponding to each rule
+
+  // Initialize rule outputs and memberships (this is just a simplified set)
+  int rule_index = 0;
+  
+  // For each rule combination of E and Ec
+  for (int i = 0; i < 7; i++) {
+    for (int j = 0; j < 7; j++) {
+      // Apply the rule: rule_mfs[i * 7 + j] is the intersection of the fuzzy sets
+      rule_mfs[rule_index] = min(E_mf[i], Ec_mf[j]);
+      
+      // The output Kp corresponding to each fuzzy rule (you need to define this based on your fuzzy rule table)
+      output_values[rule_index] = rule_outputs[rule_index];  // Adjust based on rule set
+      
+      rule_index++;
+    }
+  }
+  
+  // Defuzzification step: Compute crisp output (Kp) using weighted average of outputs
+  float numerator = 0.0;
+  float denominator = 0.0;
+  
+  // Weighted average of the rule outputs
+  for (int i = 0; i < NUM_RULES; i++) {
+    numerator += rule_mfs[i] * output_values[i];
+    denominator += rule_mfs[i];
+  }
+  
+  // Return the defuzzified Kp value
+  return (denominator != 0) ? (numerator / denominator) : 0.0;
+}
+
+// Function to compute the derivative gain (Kd) based on fuzzy logic
+float fuzzyKd(float e, float e_dot) {
+  // Normalize inputs to the range [-1, 1]
+  e = constrain(e, -1, 1);   // Normalize Error (e) to [-1, 1]
+  e_dot = constrain(e_dot, -1, 1); // Normalize Change in Error (e_dot) to [-1, 1]
+
+  // Membership values for error (E) and change in error (Ec)
+  float E_mf[7];  // Membership values for E (Error)
+  float Ec_mf[7]; // Membership values for Ec (Change in error)
+  
+  // Membership function ranges: [NB, NM, NS, ZO, PS, PM, PB]
+  // Using trapezoidal and triangular membership functions
+  
+  // Error (E) Membership Functions
+  E_mf[0] = trapmf(e, -1, -1, -0.1, 0.0);   // NB
+  E_mf[1] = trapmf(e, -0.1, 0.0, 0.0, 0.05); // NM
+  E_mf[2] = trapmf(e, 0.0, 0.05, 0.05, 0.1); // NS
+  E_mf[3] = trapmf(e, 0.05, 0.1, 0.1, 0.15); // ZO
+  E_mf[4] = trapmf(e, 0.1, 0.15, 0.15, 0.2); // PS
+  E_mf[5] = trapmf(e, 0.15, 0.2, 0.2, 0.25); // PM
+  E_mf[6] = trapmf(e, 0.2, 0.25, 1.0, 1.0);  // PB
+
+  // Change in error (Ec) Membership Functions
+  Ec_mf[0] = trapmf(e_dot, -1, -1, -0.1, 0.0);   // NB
+  Ec_mf[1] = trapmf(e_dot, -0.1, 0.0, 0.0, 0.05); // NM
+  Ec_mf[2] = trapmf(e_dot, 0.0, 0.05, 0.05, 0.1); // NS
+  Ec_mf[3] = trapmf(e_dot, 0.05, 0.1, 0.1, 0.15); // ZO
+  Ec_mf[4] = trapmf(e_dot, 0.1, 0.15, 0.15, 0.2); // PS
+  Ec_mf[5] = trapmf(e_dot, 0.15, 0.2, 0.2, 0.25); // PM
+  Ec_mf[6] = trapmf(e_dot, 0.2, 0.25, 1.0, 1.0);  // PB
+
+  // Output Membership Functions for Kd
+  float Kd_mf[7];
+  
+  // Kd Membership Functions (trimf)
+  Kd_mf[0] = trimf(0, 0, 0.2);  // NB
+  Kd_mf[1] = trimf(0.05, 0.1, 0.2); // NM
+  Kd_mf[2] = trimf(0.1, 0.15, 0.3); // NS
+  Kd_mf[3] = trimf(0.2, 0.25, 0.4); // ZO
+  Kd_mf[4] = trimf(0.25, 0.35, 0.5); // PS
+  Kd_mf[5] = trimf(0.35, 0.45, 0.6); // PM
+  Kd_mf[6] = trimf(0.5, 0.6, 1.0);  // PB
+
+  // Rule outputs based on the FIS rule base
+  // Each rule output is calculated based on the minimum of the matching inputs
+  float rule_mfs[49];  // The membership values for each fuzzy rule
+  int rule_index = 0;
+
+  // Define the rules (same as in MATLAB)
+  int rules[49][5] = {
+    {1, 1, 1, 1, 1}, {1, 2, 1, 1, 1}, {1, 3, 2, 1, 1}, {1, 4, 2, 1, 1}, {1, 5, 3, 1, 1}, {1, 6, 3, 1, 1}, {1, 7, 4, 1, 1},
+    {2, 1, 1, 1, 1}, {2, 2, 2, 1, 1}, {2, 3, 2, 1, 1}, {2, 4, 3, 1, 1}, {2, 5, 3, 1, 1}, {2, 6, 4, 1, 1}, {2, 7, 4, 1, 1},
+    {3, 1, 2, 1, 1}, {3, 2, 2, 1, 1}, {3, 3, 3, 1, 1}, {3, 4, 3, 1, 1}, {3, 5, 4, 1, 1}, {3, 6, 4, 1, 1}, {3, 7, 5, 1, 1},
+    {4, 1, 2, 1, 1}, {4, 2, 3, 1, 1}, {4, 3, 3, 1, 1}, {4, 4, 4, 1, 1}, {4, 5, 4, 1, 1}, {4, 6, 5, 1, 1}, {4, 7, 5, 1, 1},
+    {5, 1, 3, 1, 1}, {5, 2, 3, 1, 1}, {5, 3, 4, 1, 1}, {5, 4, 4, 1, 1}, {5, 5, 5, 1, 1}, {5, 6, 5, 1, 1}, {5, 7, 6, 1, 1},
+    {6, 1, 3, 1, 1}, {6, 2, 4, 1, 1}, {6, 3, 4, 1, 1}, {6, 4, 5, 1, 1}, {6, 5, 5, 1, 1}, {6, 6, 6, 1, 1}, {6, 7, 6, 1, 1},
+    {7, 1, 4, 1, 1}, {7, 2, 4, 1, 1}, {7, 3, 5, 1, 1}, {7, 4, 5, 1, 1}, {7, 5, 6, 1, 1}, {7, 6, 6, 1, 1}, {7, 7, 7, 1, 1}
+  };
+
+  // Calculate rule membership values and store them in rule_mfs
+  for (int i = 0; i < 49; i++) {
+    int ruleE = rules[i][0] - 1;   // Get E membership function index
+    int ruleEc = rules[i][1] - 1;  // Get Ec membership function index
+    rule_mfs[i] = min(E_mf[ruleE], Ec_mf[ruleEc]); // Apply fuzzy rule intersection
+  }
+
+  // Defuzzification (Centroid Method)
+  float numerator = 0.0;
+  float denominator = 0.0;
+
+  for (int i = 0; i < 49; i++) {
+    numerator += rule_mfs[i] * Kd_mf[rules[i][2] - 1];  // Rule output * Membership degree
+    denominator += rule_mfs[i];  // Sum of membership degrees
+  }
+
+  // Return defuzzified output for Kd
+  return (denominator != 0) ? (numerator / denominator) : 0.0;
+}
+
+// Membership function: Trapezoidal
+float trapmf(float x, float a, float b, float c, float d) {
+  if (x <= a || x >= d) return 0.0;
+  else if (x > a && x <= b) return (x - a) / (b - a);
+  else if (x > c && x < d) return (d - x) / (d - c);
+  else return 1.0;
+}
+
+// Membership function: Triangular
+float trimf(float x, float a, float b) {
+  if (x <= a || x >= b) return 0.0;
+  else return (b - x) / (b - a);
+}
 
 void formatData(void)
 {
