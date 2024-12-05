@@ -1,0 +1,73 @@
+%% Function Definition of Yaw Dynamics
+function force_output = yaw_dyanmics(yaw, m,m_a,rho_w,C_d,R, I_aa, mu, B, dt)
+
+    % check if yaw is greater than length 2 (for calculation of acc)
+    if length(yaw) < 2
+        yaw_0 = 0;
+        yaw_1 = 0;
+        yaw_2 = yaw(end);
+    elseif length(yaw) < 3
+        yaw_0 = 0;
+        yaw_1 = yaw(end-1);
+        yaw_2 = yaw;
+    else
+        yaw_0 = yaw(end-2);
+        yaw_1 = yaw(end-1);
+        yaw_2 = yaw(end);
+    end
+    
+    d_dot_yaw = (yaw_2 - 2 * yaw_1 + yaw_0)/(dt^2)
+    % want to ensure that this is < ~2 revolutions/s ~= 12.56 rad/s
+    dot_yaw = (yaw_2 - yaw_1)/dt
+
+    M = [(m+m_a).* eye(3) ,zeros(3); zeros(3), eye(3) .* I_aa]
+    
+    % defining 0 translational movement
+    v_x = 0;
+    v_y = 0;
+    v_z = 0;
+
+    D = [(-1/2 * rho_w * C_d * pi * R^2) * [v_x, 0, 0; 0, v_y, 0; 0,v_z, 0] * eye(3), zeros(3);
+    zeros(3), (-8*pi*R^3*mu)*eye(3)]
+  
+    % define state vectors
+    a_vector = zeros(6,1);
+    a_vector(6) = d_dot_yaw;
+
+    a_vector
+
+    phi = 0;
+    theta = 0;
+    psi_var = yaw_2;
+
+    x_dot = 0;
+    y_dot = 0;
+    z_dot = 0;
+    phi_dot = 0;
+    theta_dot = 0;
+    psi_dot = dot_yaw;
+    
+    % rotation matrix from the inertial frame to the body frame:
+    R = [cos(psi_var) * cos(theta), sin(psi_var)*cos(theta), -sin(theta);
+        -sin(psi_var) * cos(phi) + cos(psi_var) * sin(theta)*sin(phi), cos(psi_var) * cos(phi) + sin(psi_var) * sin(theta) * sin(phi), sin(phi) * cos(theta);
+        sin(psi_var) * sin(phi) + cos(psi_var) * sin(theta) * cos(phi), -cos(psi_var) * sin(phi) + sin(psi_var) * sin(theta) * cos(phi), cos(phi) * cos(theta)];
+
+    % matrix to transform rotational velocities from the inertial frame to the body frame
+    J = [1, 0, -sin(theta); 
+        0, cos(phi), cos(theta) * sin(phi);
+        0, -sin(phi), cos(theta) * cos(phi)];
+
+    eta_dot = [x_dot; y_dot; z_dot; phi_dot; theta_dot; psi_dot];
+
+    % find velocity vector in terms of respective velocities 
+    v_vector = [R, zeros(3); zeros(3), J] * eta_dot
+
+    tau_vector = M * a_vector + D * v_vector
+
+    [L,U,P] = lu(B);
+
+    y = L\(P*tau_vector);
+    Forces = U\y
+
+    
+end
