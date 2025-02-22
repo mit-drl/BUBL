@@ -210,7 +210,7 @@ common_commands = [
     ("Disable", "[H]"),
     ("Check Thrust", "[A,1,1,1,1]\n[E]"),
     ("Set Controller", "[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,2,16,8]\n[F,0,400,0,0,0]\n[A,1,1,1,1]\n[Y,0]"),
-    ("Send Command", "[C,0,0,0,0,0]"),
+    ("Send Command", "[C,0,0,0]"),
     ("Reset Yaw", "[Y,0]"),
     ("Image", "[O]"),
     ("Stream", "[B,1]"),
