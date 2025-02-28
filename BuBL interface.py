@@ -7,6 +7,7 @@ from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import threading
 import queue
+import sys
 
 # pip install pyserial numpy matplotlib
 
@@ -76,24 +77,28 @@ ax_depth = fig.add_subplot(gs[1, 0])
 ax_roll = fig.add_subplot(gs[1, 1])
 ax_depth.set_title("Depth")
 ax_roll.set_title("Roll")
-line_depth, = ax_depth.plot([], [], 'b-')
-line_roll, = ax_roll.plot([], [], 'r-')
+line_depth, = ax_depth.plot([], [], '-', color='blue')
+line_roll, = ax_roll.plot([], [], '-', color='blue')
 
 # Row 2: Pitch and Yaw
 ax_pitch = fig.add_subplot(gs[2, 0])
 ax_yaw = fig.add_subplot(gs[2, 1])
 ax_pitch.set_title("Pitch")
 ax_yaw.set_title("Yaw")
-line_pitch, = ax_pitch.plot([], [], 'g-')
-line_yaw, = ax_yaw.plot([], [], 'm-')
+line_pitch, = ax_pitch.plot([], [], '-', color='blue')
+line_yaw, = ax_yaw.plot([], [], '-', color='blue')
+
+# NEW: Autonomous sensor lines on Depth and Yaw axes.
+line_autonomous_depth, = ax_depth.plot([], [], '-', color='red')
+line_autonomous_yaw, = ax_yaw.plot([], [], '-', color='red')
 
 # Row 3: Voltage and Current
 ax_voltage = fig.add_subplot(gs[3, 0])
 ax_current = fig.add_subplot(gs[3, 1])
 ax_voltage.set_title("Voltage")
 ax_current.set_title("Current")
-line_voltage, = ax_voltage.plot([], [], 'c-')
-line_current, = ax_current.plot([], [], 'k-')
+line_voltage, = ax_voltage.plot([], [], '-', color='blue')
+line_current, = ax_current.plot([], [], '-', color='blue')
 
 # -----------------------
 # History Buffers for Additional Data
@@ -105,6 +110,9 @@ history_pitch   = []
 history_yaw     = []
 history_voltage = []
 history_current = []
+# NEW: History buffers for autonomous sensors.
+history_autonomous_depth = []
+history_autonomous_yaw   = []
 
 # -----------------------
 # Tkinter GUI Setup with Grid Layout
@@ -201,7 +209,9 @@ cmd_entry.bind("<KeyPress-Down>", on_down)
 root.bind_all("<KeyPress-Up>", on_up)
 root.bind_all("<KeyPress-Down>", on_down)
 
-# Common Command Buttons subframe.
+# -----------------------
+# Common Command Buttons (arranged in two rows)
+# -----------------------
 button_frame = ttk.Frame(control_frame)
 button_frame.pack(side=tk.TOP, fill=tk.X, pady=2)
 
@@ -223,7 +233,8 @@ common_commands = [
     ("Note Start", "[N,start]"),
     ("Note Stop", "[N,stop]"),
     ("CA1", "![1,200,50,0,0]"),
-    ("CA2", "![2,200,50,200,0]"),
+    ("CA2", "![2,200,0,200,0]"),
+    ("CA3", "![3,20,15,50,200,0]"),
     ("GO", "![GO]"),
     ("STOP", "![STOP]")
 ]
@@ -231,9 +242,13 @@ common_commands = [
 def button_command(cmd_code):
     send_command(cmd_code)
 
-for (label, cmd_code) in common_commands:
+# Arrange buttons in two rows (10 per row)
+num_cols = 10
+for index, (label, cmd_code) in enumerate(common_commands):
+    row = index // num_cols
+    col = index % num_cols
     btn = ttk.Button(button_frame, text=label, command=lambda c=cmd_code: button_command(c))
-    btn.pack(side=tk.LEFT, padx=2, pady=2)
+    btn.grid(row=row, column=col, padx=2, pady=2)
 
 # -----------------------
 # Update Plot Function
@@ -245,13 +260,16 @@ def update_plot():
         if line.startswith("data:"):
             data_str = line[5:].strip()
             tokens = data_str.replace(",", " ").split()
-            # Check if we have the extended data (38 tokens) or LiDAR-only (32 tokens)
-            if len(tokens) == 38:
+            # NEW: Handle extended data with 40 tokens (32 LiDAR + 6 sensor + 2 autonomous)
+            if len(tokens) == 40:
                 try:
-                    # Parse the first 32 tokens as integers (LiDAR data)
+                    # Parse first 32 tokens as integers (LiDAR data)
                     lidar_values = [int(token) for token in tokens[:32]]
-                    # Parse the remaining 6 tokens as floats (sensor data)
+                    # Parse next 6 tokens as floats (sensor data)
                     sensor_values = [float(token) for token in tokens[32:38]]
+                    # Parse autonomous tokens.
+                    autonomous_depth = float(tokens[38])
+                    autonomous_yaw   = float(tokens[39])
                 except ValueError as e:
                     print(f"Error parsing data from line:\n  {line}\n{e}")
                     continue
@@ -275,6 +293,8 @@ def update_plot():
                 history_yaw.append(yaw_val)
                 history_voltage.append(voltage_val)
                 history_current.append(current_val)
+                history_autonomous_depth.append(autonomous_depth)
+                history_autonomous_yaw.append(autonomous_yaw)
 
                 # Limit history length.
                 if len(history_depth) > history_length:
@@ -284,10 +304,13 @@ def update_plot():
                     history_yaw.pop(0)
                     history_voltage.pop(0)
                     history_current.pop(0)
+                    history_autonomous_depth.pop(0)
+                    history_autonomous_yaw.pop(0)
 
                 # Update Depth plot.
                 x_vals = list(range(len(history_depth)))
                 line_depth.set_data(x_vals, history_depth)
+                line_autonomous_depth.set_data(x_vals, history_autonomous_depth)
                 ax_depth.set_xlim(0, history_length)
                 ax_depth.relim()
                 ax_depth.autoscale_view()
@@ -309,6 +332,94 @@ def update_plot():
                 # Update Yaw plot.
                 x_vals = list(range(len(history_yaw)))
                 line_yaw.set_data(x_vals, history_yaw)
+                line_autonomous_yaw.set_data(x_vals, history_autonomous_yaw)
+                ax_yaw.set_xlim(0, history_length)
+                ax_yaw.relim()
+                ax_yaw.autoscale_view()
+
+                # Update Voltage plot.
+                x_vals = list(range(len(history_voltage)))
+                line_voltage.set_data(x_vals, history_voltage)
+                ax_voltage.set_xlim(0, history_length)
+                ax_voltage.relim()
+                ax_voltage.autoscale_view()
+
+                # Update Current plot.
+                x_vals = list(range(len(history_current)))
+                line_current.set_data(x_vals, history_current)
+                ax_current.set_xlim(0, history_length)
+                ax_current.relim()
+                ax_current.autoscale_view()
+
+                updated = True
+
+            # Legacy extended data: 38 tokens (no autonomous data provided)
+            elif len(tokens) == 38:
+                try:
+                    lidar_values = [int(token) for token in tokens[:32]]
+                    sensor_values = [float(token) for token in tokens[32:38]]
+                except ValueError as e:
+                    print(f"Error parsing data from line:\n  {line}\n{e}")
+                    continue
+
+                left_scan = np.array(lidar_values[:16]).reshape((4, 4))
+                right_scan = np.array(lidar_values[16:]).reshape((4, 4))
+                depth_val   = sensor_values[0]
+                roll_val    = sensor_values[1]
+                pitch_val   = sensor_values[2]
+                yaw_val     = sensor_values[3]
+                voltage_val = sensor_values[4]
+                current_val = sensor_values[5]
+
+                img_left.set_data(left_scan)
+                img_right.set_data(right_scan)
+
+                history_depth.append(depth_val)
+                history_roll.append(roll_val)
+                history_pitch.append(pitch_val)
+                history_yaw.append(yaw_val)
+                history_voltage.append(voltage_val)
+                history_current.append(current_val)
+                # Append NaN for autonomous values when not provided.
+                history_autonomous_depth.append(np.nan)
+                history_autonomous_yaw.append(np.nan)
+
+                if len(history_depth) > history_length:
+                    history_depth.pop(0)
+                    history_roll.pop(0)
+                    history_pitch.pop(0)
+                    history_yaw.pop(0)
+                    history_voltage.pop(0)
+                    history_current.pop(0)
+                    history_autonomous_depth.pop(0)
+                    history_autonomous_yaw.pop(0)
+
+                # Update Depth plot.
+                x_vals = list(range(len(history_depth)))
+                line_depth.set_data(x_vals, history_depth)
+                line_autonomous_depth.set_data(x_vals, history_autonomous_depth)
+                ax_depth.set_xlim(0, history_length)
+                ax_depth.relim()
+                ax_depth.autoscale_view()
+
+                # Update Roll plot.
+                x_vals = list(range(len(history_roll)))
+                line_roll.set_data(x_vals, history_roll)
+                ax_roll.set_xlim(0, history_length)
+                ax_roll.relim()
+                ax_roll.autoscale_view()
+
+                # Update Pitch plot.
+                x_vals = list(range(len(history_pitch)))
+                line_pitch.set_data(x_vals, history_pitch)
+                ax_pitch.set_xlim(0, history_length)
+                ax_pitch.relim()
+                ax_pitch.autoscale_view()
+
+                # Update Yaw plot.
+                x_vals = list(range(len(history_yaw)))
+                line_yaw.set_data(x_vals, history_yaw)
+                line_autonomous_yaw.set_data(x_vals, history_autonomous_yaw)
                 ax_yaw.set_xlim(0, history_length)
                 ax_yaw.relim()
                 ax_yaw.autoscale_view()
@@ -343,13 +454,13 @@ def update_plot():
                 img_right.set_data(right_scan)
                 updated = True
             else:
-               print(f"Unexpected number of tokens ({len(tokens)}) in line:\n  {line}")
+                print(f"Unexpected number of tokens ({len(tokens)}) in line:\n  {line}")
         else:
             print(line)
     if updated:
         canvas.draw_idle()
-    root.after(5, update_plot)
+    root.after(50, update_plot)
 
-root.after(5, update_plot)
+root.after(50, update_plot)
 root.mainloop()
 ser.close()
