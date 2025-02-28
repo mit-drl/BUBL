@@ -223,7 +223,8 @@ common_commands = [
     ("Set PD", "[P,20,10,0,2,0,4,16,8]"),
     ("Command", "[C,0,0,0]"),
     ("Reset Yaw", "[Y,0]"),
-    ("Image", "[O]"),
+    ("Image", "[O,1]"),
+    ("Stop Imaging", "[O,0]"),
     ("Stream", "[B,1]"),
     ("Stop Stream", "[B,0]"),
     ("Gyroscope Calibration", "[G]"),
@@ -234,7 +235,7 @@ common_commands = [
     ("Note Stop", "[N,stop]"),
     ("CA1", "![1,200,50,0,0]"),
     ("CA2", "![2,200,0,200,0]"),
-    ("CA3", "![3,20,15,50,200,0]"),
+    ("CA3", "![3,2                                                 0,15,50,200,0]"),
     ("GO", "![GO]"),
     ("STOP", "![STOP]")
 ]
