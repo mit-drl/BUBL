@@ -237,7 +237,8 @@ common_commands = [
     ("CA2", "![2,200,0,200,0]"),
     ("CA3", "![3,200,15,50,50,400,1]"),
     ("GO", "![GO]"),
-    ("STOP", "![STOP]")
+    ("STOP", "![STOP]"),
+    ("Audio", "[I,3]")
 ]
 
 def button_command(cmd_code):
