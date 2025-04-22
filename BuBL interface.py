@@ -215,42 +215,58 @@ root.bind_all("<KeyPress-Down>", on_down)
 button_frame = ttk.Frame(control_frame)
 button_frame.pack(side=tk.TOP, fill=tk.X, pady=2)
 
-common_commands = [
-    ("Enable", "[E]"),
-    ("Disable", "[H]"),
-    ("Check Thrust", "[A,1,1,1,1]\n[E]"),
-    ("Initialize", "[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,4,16,8]\n[F,0,400,0,0,0]\n[A,1,1,1,1]\n[Y,0]"),
-    ("Set PD", "[P,20,10,0,2,0,4,16,8]"),
-    ("Command", "[C,0,0,0]"),
-    ("Reset Yaw", "[Y,0]"),
-    ("Image", "[O,1]"),
-    ("Stop Imaging", "[O,0]"),
-    ("Stream", "[B,1]"),
-    ("Stop Stream", "[B,0]"),
-    ("Gyroscope Calibration", "[G]"),
-    ("LiDAR Calibration", "[V]"),
-    ("Record Data", "[R,1,5]"),
-    ("Stop Recording", "[R,0,1]"),
-    ("Note Start", "[N,start]"),
-    ("Note Stop", "[N,stop]"),
-    ("CA1", "![1,200,50,0,0]"),
-    ("CA2", "![2,200,0,200,0]"),
-    ("CA3", "![3,200,15,50,50,400,1]"),
-    ("GO", "![GO]"),
-    ("STOP", "![STOP]"),
-    ("Audio", "[I,3]")
-]
+button_groups = {
+    "Power": [
+        ("Enable", "[E]"),
+        ("Disable", "[H]"),
+    ],
+    "Motion": [
+            ("Surface", "[C,0,0,0]"),
+            ("Dive", "[C,0,10,0]"),
+            ("Forward", "[C,500,0,0]"),
+            ("Reverse", "[C,-500,0,0]"),
+            ("Rotate 180", "[C,0,0,180]"),
+            ("Rotate 360", "[C,0,0,360]"),
+        ],
+    "Controller": [
+        ("Quick Setup", "[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,4,16,8]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[Y,0]"),
+        ("Set PD", "[P,20,10,0,2,0,4,16,8]"),
+        ("Set FF", "[F,0,400,0,0,0]"),
+        ("Set Limits", "[U,500,1000,100,100,500]"),
+        ("Set Yaw", "[Y,0]"),
+    ],
+    "Calibrations": [
+        ("Gyro Cal", "[G]"),
+        ("LiDAR Cal", "[V]"),
+    ],
+    "Data & Recording": [
+        ("Stream", "[B,1]"),
+        ("Stop Stream", "[B,0]"),
+        ("Capture Image", "[O,1,1]"),
+        ("Capture Audio", "[I,3]"),
+        ("Record State Data", "[R,1,5]"),
+        ("Stop Recording", "[R,0,1]"),
+        ("Note Start", "[N,start]"),
+        ("Note Stop", "[N,stop]"),
+    ],
+    "Autonomy": [
+        ("STOP", "![A,0]"),
+        ("CA1", "![1,200,50,0,0]"),
+        ("CA2", "![2,200,0,200,0]"),
+        ("CA3", "![3,200,15,50,50,400,1]"),
+    ],
+}
+
+for col, (group_name, items) in enumerate(button_groups.items()):
+    lf = ttk.LabelFrame(button_frame, text=group_name)
+    lf.grid(row=0, column=col, padx=5, pady=2, sticky="n")
+    for i, (label, cmd_code) in enumerate(items):
+        btn = ttk.Button(lf, text=label,
+                         command=lambda c=cmd_code: send_command(c))
+        btn.grid(row=i//2, column=i%2, padx=2, pady=2, sticky="ew")
 
 def button_command(cmd_code):
     send_command(cmd_code)
-
-# Arrange buttons in two rows (10 per row)
-num_cols = 10
-for index, (label, cmd_code) in enumerate(common_commands):
-    row = index // num_cols
-    col = index % num_cols
-    btn = ttk.Button(button_frame, text=label, command=lambda c=cmd_code: button_command(c))
-    btn.grid(row=row, column=col, padx=2, pady=2)
 
 # -----------------------
 # Update Plot Function
@@ -272,6 +288,7 @@ def update_plot():
                     # Parse autonomous tokens.
                     autonomous_depth = float(tokens[38])
                     autonomous_yaw   = float(tokens[39])
+
                 except ValueError as e:
                     print(f"Error parsing data from line:\n  {line}\n{e}")
                     continue
