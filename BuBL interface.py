@@ -226,7 +226,7 @@ button_groups = {
             ("Rotate 360", "[C,0,0,360]"),
         ],
     "Controller": [
-        ("Quick Setup", "[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,4,16,8]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[Y,0]"),
+        ("Quick Setup", "[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,4,16,8]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,0,0,0]\n[Y,0]"),
         ("Set Yaw", "[Y,0]"),
         ("Set PD", "[P,20,10,0,2,0,4,16,8]"),
         ("Set FF", "[F,0,400,0,0,0]"),
@@ -245,6 +245,9 @@ button_groups = {
         ("Record All Data", "[R,1,5]"),
         ("Record Basic Data", "[R,2,10]"),
         ("Record State Data", "[R,4,20]"),
+        ("Record Roll", "[R,5,50]"),
+        ("Record Pitch", "[R,6,50]"),
+        ("Record Yaw", "[R,7,50]"),
         ("Stop Recording", "[R,0,1]"),
         ("Note Start", "[N,start]"),
         ("Note Stop", "[N,stop]"),
