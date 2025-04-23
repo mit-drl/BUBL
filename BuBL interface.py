@@ -11,9 +11,6 @@ import sys
 
 # pip install pyserial numpy matplotlib
 
-# -----------------------
-# Serial Port Configuration
-# -----------------------
 try:
     # change for correct serial port
     ser = serial.Serial('COM7', 921600, timeout=0.1)
