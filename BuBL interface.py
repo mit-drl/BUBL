@@ -256,8 +256,13 @@ button_groups = {
         ("STOP", "[A,0]"),
         ("CA1", "[A,1,200,50,0,0]"),
         ("CA2", "[A,2,200,0,200,0]"),
-        ("CA3", "[A,3,200,15,50,0,400,1]"),
+        ("CA3", "[A,3]"),
     ],
+
+    "Experiments": [
+        ("dC", "[dC,200,5,5]"),
+        ("CA4", "[A,4,200,3,10,100,0]"),
+    ]
 }
 
 for col, (group_name, items) in enumerate(button_groups.items()):
