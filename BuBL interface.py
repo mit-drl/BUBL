@@ -9,6 +9,8 @@ import threading
 import queue
 import sys
 
+# V 1.1
+
 # pip install pyserial numpy matplotlib
 
 try:
@@ -262,7 +264,7 @@ button_groups = {
     "Experiments": [
         ("dC", "[dC,200,5,5]"),
         ("CA4", "[A,4,200,3,10,100,0]"),
-        ("RED", "[A,5,180,1000,0.5,0,0]")
+        ("RED", "[A,5,180,1000,0.1,0,0]")
     ]
 }
 
@@ -287,8 +289,7 @@ def update_plot():
         if line.startswith("data:"):
             data_str = line[5:].strip()
             tokens = data_str.replace(",", " ").split()
-            # NEW: Handle extended data with 40 tokens (32 LiDAR + 6 sensor + 2 autonomous)
-            if len(tokens) == 40:
+            if len(tokens) == 42:
                 try:
                     # Parse first 32 tokens as integers (LiDAR data)
                     lidar_values = [int(token) for token in tokens[:32]]
@@ -297,6 +298,9 @@ def update_plot():
                     # Parse autonomous tokens.
                     autonomous_depth = float(tokens[38])
                     autonomous_yaw   = float(tokens[39])
+
+                    debug_1 = float(tokens[40])
+                    debug_2 = float(tokens[41])
 
                 except ValueError as e:
                     print(f"Error parsing data from line:\n  {line}\n{e}")
@@ -323,6 +327,7 @@ def update_plot():
                 history_current.append(current_val)
                 history_autonomous_depth.append(autonomous_depth)
                 history_autonomous_yaw.append(autonomous_yaw)
+
 
                 # Limit history length.
                 if len(history_depth) > history_length:
@@ -381,112 +386,13 @@ def update_plot():
 
                 updated = True
 
-            # Legacy extended data: 38 tokens (no autonomous data provided)
-            elif len(tokens) == 38:
-                try:
-                    lidar_values = [int(token) for token in tokens[:32]]
-                    sensor_values = [float(token) for token in tokens[32:38]]
-                except ValueError as e:
-                    print(f"Error parsing data from line:\n  {line}\n{e}")
-                    continue
-
-                left_scan = np.array(lidar_values[:16]).reshape((4, 4))
-                right_scan = np.array(lidar_values[16:]).reshape((4, 4))
-                depth_val   = sensor_values[0]
-                roll_val    = sensor_values[1]
-                pitch_val   = sensor_values[2]
-                yaw_val     = sensor_values[3]
-                voltage_val = sensor_values[4]
-                current_val = sensor_values[5]
-
-                img_left.set_data(left_scan)
-                img_right.set_data(right_scan)
-
-                history_depth.append(depth_val)
-                history_roll.append(roll_val)
-                history_pitch.append(pitch_val)
-                history_yaw.append(yaw_val)
-                history_voltage.append(voltage_val)
-                history_current.append(current_val)
-                # Append NaN for autonomous values when not provided.
-                history_autonomous_depth.append(np.nan)
-                history_autonomous_yaw.append(np.nan)
-
-                if len(history_depth) > history_length:
-                    history_depth.pop(0)
-                    history_roll.pop(0)
-                    history_pitch.pop(0)
-                    history_yaw.pop(0)
-                    history_voltage.pop(0)
-                    history_current.pop(0)
-                    history_autonomous_depth.pop(0)
-                    history_autonomous_yaw.pop(0)
-
-                # Update Depth plot.
-                x_vals = list(range(len(history_depth)))
-                line_depth.set_data(x_vals, history_depth)
-                line_autonomous_depth.set_data(x_vals, history_autonomous_depth)
-                ax_depth.set_xlim(0, history_length)
-                ax_depth.relim()
-                ax_depth.autoscale_view()
-
-                # Update Roll plot.
-                x_vals = list(range(len(history_roll)))
-                line_roll.set_data(x_vals, history_roll)
-                ax_roll.set_xlim(0, history_length)
-                ax_roll.relim()
-                ax_roll.autoscale_view()
-
-                # Update Pitch plot.
-                x_vals = list(range(len(history_pitch)))
-                line_pitch.set_data(x_vals, history_pitch)
-                ax_pitch.set_xlim(0, history_length)
-                ax_pitch.relim()
-                ax_pitch.autoscale_view()
-
-                # Update Yaw plot.
-                x_vals = list(range(len(history_yaw)))
-                line_yaw.set_data(x_vals, history_yaw)
-                line_autonomous_yaw.set_data(x_vals, history_autonomous_yaw)
-                ax_yaw.set_xlim(0, history_length)
-                ax_yaw.relim()
-                ax_yaw.autoscale_view()
-
-                # Update Voltage plot.
-                x_vals = list(range(len(history_voltage)))
-                line_voltage.set_data(x_vals, history_voltage)
-                ax_voltage.set_xlim(0, history_length)
-                ax_voltage.relim()
-                ax_voltage.autoscale_view()
-
-                # Update Current plot.
-                x_vals = list(range(len(history_current)))
-                line_current.set_data(x_vals, history_current)
-                ax_current.set_xlim(0, history_length)
-                ax_current.relim()
-                ax_current.autoscale_view()
-
-                updated = True
-
-            elif len(tokens) == 32:
-                # LiDAR-only data.
-                try:
-                    lidar_values = [int(token) for token in tokens]
-                except ValueError as e:
-                    print(f"Error parsing LiDAR-only data from line:\n  {line}\n{e}")
-                    continue
-
-                left_scan = np.array(lidar_values[:16]).reshape((4, 4))
-                right_scan = np.array(lidar_values[16:]).reshape((4, 4))
-                img_left.set_data(left_scan)
-                img_right.set_data(right_scan)
-                updated = True
             else:
                 print(f"Unexpected number of tokens ({len(tokens)}) in line:\n  {line}")
         else:
             print(line)
     if updated:
         canvas.draw_idle()
+        print(debug_1, ",",  debug_2)
     root.after(50, update_plot)
 
 root.after(50, update_plot)
