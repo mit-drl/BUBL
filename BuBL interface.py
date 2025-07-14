@@ -315,6 +315,8 @@ def update_plot():
                 voltage_val = sensor_values[4]
                 current_val = sensor_values[5]
 
+                autonomous_yaw = yaw_val + autonomous_yaw
+
                 img_left.set_data(left_scan)
                 img_right.set_data(right_scan)
 
