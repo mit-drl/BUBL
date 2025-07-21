@@ -49,11 +49,11 @@ reader_thread.start()
 # Create a GridSpec layout with 4 rows and 2 columns.
 # The height_ratios ensure that the LiDAR plots (in row 0) take up more space.
 fig = plt.figure(figsize=(12, 10))
-gs = gridspec.GridSpec(4, 2, figure=fig, hspace=0.4, wspace=0.3, height_ratios=[3, 1, 1, 1])
+gs = gridspec.GridSpec(4, 3, figure=fig, hspace=0.4, wspace=0.3, height_ratios=[3, 1, 1, 1])
 
 # --- LiDAR Axes (Row 0) ---
 ax_lidar_left = fig.add_subplot(gs[0, 0])
-ax_lidar_right = fig.add_subplot(gs[0, 1])
+ax_lidar_right = fig.add_subplot(gs[0, 2])
 vmin, vmax = 0, 255
 Z_left = np.zeros((4, 4))
 Z_right = np.zeros((4, 4))
@@ -71,19 +71,23 @@ cbar = fig.colorbar(img_left, cax=cbar_ax)
 cbar.set_label("LiDAR Value", fontsize=12)
 
 # --- Additional Sensor Axes ---
-# Row 1: Depth and Roll
+# Row 1: Depth and Foward
 ax_depth = fig.add_subplot(gs[1, 0])
-ax_roll = fig.add_subplot(gs[1, 1])
+ax_fwd = fig.add_subplot(gs[1, 1])
 ax_depth.set_title("Depth")
-ax_roll.set_title("Roll")
+ax_fwd.set_title("Forward")
 line_depth, = ax_depth.plot([], [], '-', color='blue')
-line_roll, = ax_roll.plot([], [], '-', color='blue')
+line_fwd, = ax_fwd.plot([], [], '-', color='red')
+
 
 # Row 2: Pitch and Yaw
-ax_pitch = fig.add_subplot(gs[2, 0])
-ax_yaw = fig.add_subplot(gs[2, 1])
+ax_roll = fig.add_subplot(gs[2, 0])
+ax_pitch = fig.add_subplot(gs[2, 1])
+ax_yaw = fig.add_subplot(gs[2, 2])
+ax_roll.set_title("Roll")
 ax_pitch.set_title("Pitch")
 ax_yaw.set_title("Yaw")
+line_roll, = ax_roll.plot([], [], '-', color='blue')
 line_pitch, = ax_pitch.plot([], [], '-', color='blue')
 line_yaw, = ax_yaw.plot([], [], '-', color='blue')
 
@@ -109,7 +113,8 @@ history_pitch   = []
 history_yaw     = []
 history_voltage = []
 history_current = []
-# NEW: History buffers for autonomous sensors.
+# History buffers for autonomy commands
+history_autonomous_fwd = []
 history_autonomous_depth = []
 history_autonomous_yaw   = []
 
@@ -263,10 +268,12 @@ button_groups = {
 
     "Experiments": [
         ("dC", "[dC,200,5,5]"),
-        ("CA4", "[A,4,200,3,10,100,0]"),
-        ("RED", "[A,5,180,1000,0.1,0,0]")
+        ("CA4","[A,4,200,3,10,100,0]"),
+        ("RED","[A,5,0.3,80,100,10,1000,1,0.1,0,0]")
     ]
 }
+
+# A, 5, {alpha}, {centerX}, {yaw_kp}, {yaw_kd}, {desired_pixels}, {fwd_kp}, {fwd_kd}, {fwd_ff}, {depth}
 
 for col, (group_name, items) in enumerate(button_groups.items()):
     lf = ttk.LabelFrame(button_frame, text=group_name)
@@ -296,11 +303,11 @@ def update_plot():
                     # Parse next 6 tokens as floats (sensor data)
                     sensor_values = [float(token) for token in tokens[32:38]]
                     # Parse autonomous tokens.
-                    autonomous_depth = float(tokens[38])
-                    autonomous_yaw   = float(tokens[39])
+                    autonomous_fwd      = float(tokens[38])
+                    autonomous_depth    = float(tokens[39])
+                    autonomous_yaw      = float(tokens[40])
 
-                    debug_1 = float(tokens[40])
-                    debug_2 = float(tokens[41])
+                    debug_1 = float(tokens[41])
 
                 except ValueError as e:
                     print(f"Error parsing data from line:\n  {line}\n{e}")
@@ -327,6 +334,7 @@ def update_plot():
                 history_yaw.append(yaw_val)
                 history_voltage.append(voltage_val)
                 history_current.append(current_val)
+                history_autonomous_fwd.append(autonomous_fwd)
                 history_autonomous_depth.append(autonomous_depth)
                 history_autonomous_yaw.append(autonomous_yaw)
 
@@ -339,6 +347,7 @@ def update_plot():
                     history_yaw.pop(0)
                     history_voltage.pop(0)
                     history_current.pop(0)
+                    history_autonomous_fwd.pop(0)
                     history_autonomous_depth.pop(0)
                     history_autonomous_yaw.pop(0)
 
@@ -349,6 +358,13 @@ def update_plot():
                 ax_depth.set_xlim(0, history_length)
                 ax_depth.relim()
                 ax_depth.autoscale_view()
+
+                # Update Forward plot.
+                x_vals = list(range(len(history_autonomous_fwd)))
+                line_fwd.set_data(x_vals, history_autonomous_fwd)
+                ax_fwd.set_xlim(0, history_length)
+                ax_fwd.relim()
+                ax_fwd.autoscale_view()
 
                 # Update Roll plot.
                 x_vals = list(range(len(history_roll)))
@@ -394,7 +410,7 @@ def update_plot():
             print(line)
     if updated:
         canvas.draw_idle()
-        print(debug_1, ",",  debug_2)
+        print(debug_1)
     root.after(50, update_plot)
 
 root.after(50, update_plot)
