@@ -123,7 +123,7 @@ history_autonomous_yaw   = []
 # -----------------------
 root = tk.Tk()
 root.title("LiDAR Command Interface")
-root.geometry("1200x900")
+root.geometry("1600x900")
 
 # Use grid layout on the main window:
 # Row 0: Canvas frame (plots)
@@ -162,6 +162,7 @@ history_index = -1
 def send_command(cmd):
     """Send the command to the serial port and record it in history."""
     global command_history
+    # print(cmd)
     try:
         ser.write((cmd + "\n").encode('utf-8'))
         ser.flush()  # Ensure immediate transmission.
@@ -220,6 +221,11 @@ button_frame = ttk.Frame(control_frame)
 button_frame.pack(side=tk.TOP, fill=tk.X, pady=2)
 
 button_groups = {
+    "Connection": [
+        ("NEPTUNE", "!NEPTUNE"),
+        ("POSEIDON", "!POSEIDON"),
+        ("PROTEUS", "!PROTEUS"),
+    ],
     "Power": [
         ("Enable", "[E]"),
         ("Disable", "[H]"),
@@ -232,10 +238,9 @@ button_groups = {
             ("Rotate 180", "[C,0,0,180]"),
             ("Rotate 360", "[C,0,0,360]"),
         ],
-    "Controller": [
-        ("Quick Setup", "[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,4,16,8]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,0,0,0]\n[Y,0]"),
+        ("Quick Setup", "[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,2,4,2]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]"),
         ("Set Yaw", "[Y,0]"),
-        ("Set PD", "[P,20,10,0,2,0,4,16,8]"),
+        ("Set PD", "[P,20,10,0,2,0,2,4,2]"),
         ("Set FF", "[F,0,400,0,0,0]"),
         ("Set Limits", "[U,500,1000,100,100,500]"),
         ("Set Filter", "[L,0,10,10,10]"),
@@ -278,9 +283,48 @@ button_groups = {
 for col, (group_name, items) in enumerate(button_groups.items()):
     lf = ttk.LabelFrame(button_frame, text=group_name)
     lf.grid(row=0, column=col, padx=5, pady=2, sticky="n")
+
+    if group_name == "Connection":
+        names = [label for (label, _cmd) in items]  # e.g. ["NEPTUNE","POSEIDON","PROTEUS"]
+
+        # StringVar + Combobox
+        conn_var = tk.StringVar()
+        combo = ttk.Combobox(lf, textvariable=conn_var, values=names,
+                             state="readonly", width=14)
+        combo.grid(row=0, column=0, padx=2, pady=2, sticky="ew", columnspan=2)
+
+        # Robust initialization (do both, some platforms need it)
+        if names:
+            conn_var.set(names[0])
+            combo.current(0)
+
+
+        def do_connect(*_):
+            # Read from the widget first (most reliable), then fallback to the var
+            target = combo.get().strip() or conn_var.get().strip()
+            print("DEBUG names list:", names)  # debug
+            print("DEBUG combo.get():", repr(combo.get()))  # debug
+            print("DEBUG conn_var.get():", repr(conn_var.get()))  # debug
+            if not target:
+                print("[ERROR] No target selected")
+                return
+            cmd = f"!{target}"
+            print("Connecting with command:", cmd)
+            send_command(cmd)
+
+
+        ttk.Button(lf, text="Connect", command=do_connect).grid(
+            row=1, column=0, padx=2, pady=2, sticky="ew", columnspan=2
+        )
+
+        # If you *don't* want auto-send on selection, leave this commented out:
+        # combo.bind("<<ComboboxSelected>>", do_connect)
+
+        continue  # skip regular button rendering for this group
+
+    # --- Regular groups (unchanged) ---
     for i, (label, cmd_code) in enumerate(items):
-        btn = ttk.Button(lf, text=label,
-                         command=lambda c=cmd_code: send_command(c))
+        btn = ttk.Button(lf, text=label, command=lambda c=cmd_code: send_command(c))
         btn.grid(row=i//2, column=i%2, padx=2, pady=2, sticky="ew")
 
 def button_command(cmd_code):
@@ -293,6 +337,7 @@ def update_plot():
     updated = False
     while not serial_queue.empty():
         line = serial_queue.get()
+        # print(line)
         if line.startswith("data:"):
             data_str = line[5:].strip()
             tokens = data_str.replace(",", " ").split()
