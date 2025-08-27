@@ -8,6 +8,7 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import threading
 import queue
 import sys
+import time
 
 # V 1.1
 
@@ -22,6 +23,8 @@ except Exception as e:
 
 # Create a queue to hold serial lines read from the port.
 serial_queue = queue.Queue()
+
+# Variable to designate transmission type
 
 # -----------------------
 # Serial Reading Thread
@@ -162,7 +165,7 @@ history_index = -1
 def send_command(cmd):
     """Send the command to the serial port and record it in history."""
     global command_history
-    # print(cmd)
+
     try:
         ser.write((cmd + "\n").encode('utf-8'))
         ser.flush()  # Ensure immediate transmission.
@@ -274,8 +277,16 @@ button_groups = {
 
     "Experiments": [
         ("dC", "[dC,200,5,5]"),
-        ("CA4","[A,4,200,3,10,100,0]"),
-        ("RED","[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]")
+        ("CA4", "[A,4,200,3,10,100,0]"),
+        ("RED", "[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]"),
+    ],
+
+    "Experiments - Swarm": [
+        ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]"),
+        ("Disable All", "!NEPTUNE#[H]#!POSEIDON#[H]"),
+        ("Set Yaw", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]"),
+        ("Forward All", "!NEPTUNE#[C,500,0,0]#!POSEIDON#[C,500,0,0]"),
+        ("Setup All", "!NEPTUNE#[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,2,4,2]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]#!POSEIDON#[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,2,4,2]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]"),
     ]
 }
 
@@ -286,40 +297,29 @@ for col, (group_name, items) in enumerate(button_groups.items()):
     lf.grid(row=0, column=col, padx=5, pady=2, sticky="n")
 
     if group_name == "Connection":
-        names = [label for (label, _cmd) in items]  # e.g. ["NEPTUNE","POSEIDON","PROTEUS"]
-
-        # StringVar + Combobox
+        names = [label for (label, _cmd) in items]
         conn_var = tk.StringVar()
-        combo = ttk.Combobox(lf, textvariable=conn_var, values=names,
-                             state="readonly", width=14)
+
+        combo = ttk.Combobox(
+            lf, textvariable=conn_var, values=names, state="readonly", width=14
+        )
         combo.grid(row=0, column=0, padx=2, pady=2, sticky="ew", columnspan=2)
 
-        # Robust initialization (do both, some platforms need it)
+        # Initialize display without sending a command yet
         if names:
             conn_var.set(names[0])
             combo.current(0)
 
 
-        def do_connect(*_):
-            # Read from the widget first (most reliable), then fallback to the var
-            target = combo.get().strip() or conn_var.get().strip()
-            print("DEBUG names list:", names)  # debug
-            print("DEBUG combo.get():", repr(combo.get()))  # debug
-            print("DEBUG conn_var.get():", repr(conn_var.get()))  # debug
-            if not target:
-                print("[ERROR] No target selected")
-                return
+        def on_select(_evt=None):
+            # Always read from the widget; fallback to var
+            target = combo.get()
             cmd = f"!{target}"
             print("Connecting with command:", cmd)
             send_command(cmd)
 
 
-        ttk.Button(lf, text="Connect", command=do_connect).grid(
-            row=1, column=0, padx=2, pady=2, sticky="ew", columnspan=2
-        )
-
-        # If you *don't* want auto-send on selection, leave this commented out:
-        # combo.bind("<<ComboboxSelected>>", do_connect)
+        combo.bind("<<ComboboxSelected>>", on_select)
 
         continue  # skip regular button rendering for this group
 
@@ -339,7 +339,9 @@ def update_plot():
     while not serial_queue.empty():
         line = serial_queue.get()
         # print(line)
-        if line.startswith("data:"):
+        if line.startswith("$"):
+            status_str = line[1:].strip()
+        elif line.startswith("data:"):
             data_str = line[5:].strip()
             tokens = data_str.replace(",", " ").split()
             if len(tokens) == 42:
