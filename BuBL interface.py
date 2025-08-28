@@ -10,7 +10,7 @@ import queue
 import sys
 import time
 
-# V 1.1
+# V 1.2  (adds 4-bar thrust visualization)
 
 # pip install pyserial numpy matplotlib
 
@@ -23,8 +23,6 @@ except Exception as e:
 
 # Create a queue to hold serial lines read from the port.
 serial_queue = queue.Queue()
-
-# Variable to designate transmission type
 
 # -----------------------
 # Serial Reading Thread
@@ -49,8 +47,6 @@ reader_thread.start()
 # -----------------------
 # Matplotlib Setup for Visualization
 # -----------------------
-# Create a GridSpec layout with 4 rows and 2 columns.
-# The height_ratios ensure that the LiDAR plots (in row 0) take up more space.
 fig = plt.figure(figsize=(12, 10))
 gs = gridspec.GridSpec(4, 3, figure=fig, hspace=0.4, wspace=0.3, height_ratios=[3, 1, 1, 1])
 
@@ -74,29 +70,39 @@ cbar = fig.colorbar(img_left, cax=cbar_ax)
 cbar.set_label("LiDAR Value", fontsize=12)
 
 # --- Additional Sensor Axes ---
-# Row 1: Depth and Foward
+# Row 1: Depth, Forward, and NEW Thrust Bars
 ax_depth = fig.add_subplot(gs[1, 0])
-ax_fwd = fig.add_subplot(gs[1, 1])
+ax_fwd   = fig.add_subplot(gs[1, 1])
 ax_depth.set_title("Depth")
 ax_fwd.set_title("Forward")
 line_depth, = ax_depth.plot([], [], '-', color='blue')
-line_fwd, = ax_fwd.plot([], [], '-', color='red')
+line_fwd,   = ax_fwd.plot([], [], '-', color='red')
 
+# NEW: Thrust bar chart (Rows 1–2, Col 2)
+ax_thrust = fig.add_subplot(gs[1:3, 2])   # spans row 1 and 2
+ax_thrust.set_title("Thrusts")
+bar_positions = np.arange(4)
+bar_labels = ["T1", "T2", "T3", "T4"]
+bar_container = ax_thrust.bar(bar_positions, [0, 0, 0, 0])
+ax_thrust.set_xticks(bar_positions, bar_labels)
+ax_thrust.axhline(0, linewidth=1)
+ax_thrust.set_ylabel("Thrust (0–800)")
+ax_thrust.set_ylim(0, 800)
 
-# Row 2: Pitch and Yaw
-ax_roll = fig.add_subplot(gs[2, 0])
+# Row 2: Roll, Pitch, Yaw
+ax_roll  = fig.add_subplot(gs[2, 0])
 ax_pitch = fig.add_subplot(gs[2, 1])
-ax_yaw = fig.add_subplot(gs[2, 2])
+ax_yaw   = fig.add_subplot(gs[3, 2])
 ax_roll.set_title("Roll")
 ax_pitch.set_title("Pitch")
 ax_yaw.set_title("Yaw")
-line_roll, = ax_roll.plot([], [], '-', color='blue')
+line_roll,  = ax_roll.plot([], [], '-', color='blue')
 line_pitch, = ax_pitch.plot([], [], '-', color='blue')
-line_yaw, = ax_yaw.plot([], [], '-', color='blue')
+line_yaw,   = ax_yaw.plot([], [], '-', color='blue')
 
 # NEW: Autonomous sensor lines on Depth and Yaw axes.
 line_autonomous_depth, = ax_depth.plot([], [], '-', color='red')
-line_autonomous_yaw, = ax_yaw.plot([], [], '-', color='red')
+line_autonomous_yaw,   = ax_yaw.plot([], [], '-', color='red')
 
 # Row 3: Voltage and Current
 ax_voltage = fig.add_subplot(gs[3, 0])
@@ -116,10 +122,12 @@ history_pitch   = []
 history_yaw     = []
 history_voltage = []
 history_current = []
-# History buffers for autonomy commands
-history_autonomous_fwd = []
+history_autonomous_fwd   = []
 history_autonomous_depth = []
 history_autonomous_yaw   = []
+
+# Keep recent thrusts for simple smoothing/limit logic (optional)
+last_thrusts = [0.0, 0.0, 0.0, 0.0]
 
 # -----------------------
 # Tkinter GUI Setup with Grid Layout
@@ -128,9 +136,6 @@ root = tk.Tk()
 root.title("LiDAR Command Interface")
 root.geometry("1600x900")
 
-# Use grid layout on the main window:
-# Row 0: Canvas frame (plots)
-# Row 1: Control frame (command text box & buttons)
 root.rowconfigure(0, weight=1)
 root.rowconfigure(1, weight=0)
 root.columnconfigure(0, weight=1)
@@ -142,7 +147,7 @@ canvas_frame.grid(row=0, column=0, sticky="nsew")
 canvas = FigureCanvasTkAgg(fig, master=canvas_frame)
 canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
-# --- Control Frame (Command text box and buttons) ---
+# --- Control Frame ---
 control_frame = ttk.Frame(root)
 control_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
@@ -165,7 +170,6 @@ history_index = -1
 def send_command(cmd):
     """Send the command to the serial port and record it in history."""
     global command_history
-
     try:
         ser.write((cmd + "\n").encode('utf-8'))
         ser.flush()  # Ensure immediate transmission.
@@ -218,7 +222,7 @@ root.bind_all("<KeyPress-Up>", on_up)
 root.bind_all("<KeyPress-Down>", on_down)
 
 # -----------------------
-# Common Command Buttons (arranged in two rows)
+# Common Command Buttons
 # -----------------------
 button_frame = ttk.Frame(control_frame)
 button_frame.pack(side=tk.TOP, fill=tk.X, pady=2)
@@ -234,13 +238,13 @@ button_groups = {
         ("Disable", "[H]"),
     ],
     "Motion": [
-            ("Surface", "[C,0,0,0]"),
-            ("Dive", "[C,0,10,0]"),
-            ("Forward", "[C,500,0,0]"),
-            ("Reverse", "[C,-500,0,0]"),
-            ("Rotate 180", "[C,0,0,180]"),
-            ("Rotate 360", "[C,0,0,360]"),
-        ],
+        ("Surface", "[C,0,0,0]"),
+        ("Dive", "[C,0,10,0]"),
+        ("Forward", "[C,500,0,0]"),
+        ("Reverse", "[C,-500,0,0]"),
+        ("Rotate 180", "[C,0,0,180]"),
+        ("Rotate 360", "[C,0,0,360]"),
+    ],
     "Controller": [
         ("Quick Setup", "[H]\n[U,500,1000,100,100,500]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]"),
         ("Set Yaw", "[Y,0]"),
@@ -294,8 +298,6 @@ button_groups = {
     ]
 }
 
-# A, 5, {alpha}, {centerX}, {yaw_kp}, {yaw_kd}, {desired_pixels}, {fwd_kp}, {fwd_kd}, {fwd_ff}, {depth}
-
 for col, (group_name, items) in enumerate(button_groups.items()):
     lf = ttk.LabelFrame(button_frame, text=group_name)
     lf.grid(row=0, column=col, padx=5, pady=2, sticky="n")
@@ -303,31 +305,24 @@ for col, (group_name, items) in enumerate(button_groups.items()):
     if group_name == "Connection":
         names = [label for (label, _cmd) in items]
         conn_var = tk.StringVar()
-
         combo = ttk.Combobox(
             lf, textvariable=conn_var, values=names, state="readonly", width=14
         )
         combo.grid(row=0, column=0, padx=2, pady=2, sticky="ew", columnspan=2)
 
-        # Initialize display without sending a command yet
         if names:
             conn_var.set(names[0])
             combo.current(0)
 
-
         def on_select(_evt=None):
-            # Always read from the widget; fallback to var
             target = combo.get()
             cmd = f"!{target}"
             print("Connecting with command:", cmd)
             send_command(cmd)
 
-
         combo.bind("<<ComboboxSelected>>", on_select)
+        continue
 
-        continue  # skip regular button rendering for this group
-
-    # --- Regular groups (unchanged) ---
     for i, (label, cmd_code) in enumerate(items):
         btn = ttk.Button(lf, text=label, command=lambda c=cmd_code: send_command(c))
         btn.grid(row=i//2, column=i%2, padx=2, pady=2, sticky="ew")
@@ -348,7 +343,7 @@ def update_plot():
         elif line.startswith("data:"):
             data_str = line[5:].strip()
             tokens = data_str.replace(",", " ").split()
-            if len(tokens) == 42:
+            if len(tokens) == 46:
                 try:
                     # Parse first 32 tokens as integers (LiDAR data)
                     lidar_values = [int(token) for token in tokens[:32]]
@@ -358,8 +353,12 @@ def update_plot():
                     autonomous_fwd      = float(tokens[38])
                     autonomous_depth    = float(tokens[39])
                     autonomous_yaw      = float(tokens[40])
+                    thrust_1            = float(tokens[41])
+                    thrust_2            = float(tokens[42])
+                    thrust_3            = float(tokens[43])
+                    thrust_4            = float(tokens[44])
 
-                    debug_1 = float(tokens[41])
+                    debug_1 = float(tokens[45])
 
                 except ValueError as e:
                     print(f"Error parsing data from line:\n  {line}\n{e}")
@@ -389,7 +388,6 @@ def update_plot():
                 history_autonomous_fwd.append(autonomous_fwd)
                 history_autonomous_depth.append(autonomous_depth)
                 history_autonomous_yaw.append(autonomous_yaw)
-
 
                 # Limit history length.
                 if len(history_depth) > history_length:
@@ -454,6 +452,13 @@ def update_plot():
                 ax_current.relim()
                 ax_current.autoscale_view()
 
+                # -------- NEW: Update Thrust Bars --------
+                thrusts = [thrust_1, thrust_2, thrust_3, thrust_4]
+                for i, b in enumerate(bar_container):
+                    b.set_height(thrusts[i])
+                ax_thrust.set_ylim(0, 800)
+                # ----------------------------------------
+
                 updated = True
 
             else:
@@ -462,7 +467,9 @@ def update_plot():
             print(line)
     if updated:
         canvas.draw_idle()
-        print(debug_1)
+        # Optional debug output:
+        # print(debug_1)
+        # print(*last_thrusts)
     root.after(50, update_plot)
 
 root.after(50, update_plot)
