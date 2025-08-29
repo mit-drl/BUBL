@@ -8,6 +8,9 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import threading
 import queue
 import sys
+import os
+from matplotlib.patches import Circle
+
 import time
 
 # V 1.2  (adds 4-bar thrust visualization)
@@ -47,8 +50,8 @@ reader_thread.start()
 # -----------------------
 # Matplotlib Setup for Visualization
 # -----------------------
-fig = plt.figure(figsize=(12, 10))
-gs = gridspec.GridSpec(4, 3, figure=fig, hspace=0.4, wspace=0.3, height_ratios=[3, 1, 1, 1])
+fig = plt.figure(figsize=(14, 10))
+gs = gridspec.GridSpec(4, 4, figure=fig, hspace=0.4, wspace=0.3, height_ratios=[3, 1, 1, 1])
 
 # --- LiDAR Axes (Row 0) ---
 ax_lidar_left = fig.add_subplot(gs[0, 0])
@@ -88,6 +91,42 @@ ax_thrust.set_xticks(bar_positions, bar_labels)
 ax_thrust.axhline(0, linewidth=1)
 ax_thrust.set_ylabel("Thrust (0–800)")
 ax_thrust.set_ylim(0, 800)
+
+# --- Robot top-down diagram (Rows 1–2, Col 3) ---
+ax_robot = fig.add_subplot(gs[1:3, 3])
+ax_robot.set_title("Thruster Layout (Top-down)")
+ax_robot.set_aspect('equal')
+ax_robot.set_xlim(-1.1, 1.1)
+ax_robot.set_ylim(-1.1, 1.1)
+ax_robot.axis('off')
+
+# Body outline (remove if using a detailed background image)
+body = Circle((0, 0), 0.9, fill=False, lw=1.5)
+ax_robot.add_patch(body)
+
+T_POS = {
+    "T1": (-0.6,  0.6),  # top-left
+    "T3": ( 0.6,  0.6),  # top-right
+    "T4": ( 0.6, -0.6),  # bottom-right
+    "T2": (-0.6, -0.6),  # bottom-left
+}
+ORDER = ["T1", "T3", "T4", "T2"]  # enforce visual order
+
+thruster_nodes = {}
+thruster_arrows = {}
+
+for name in ORDER:
+    x, y = T_POS[name]
+    dot = Circle((x, y), 0.06, color='tab:blue', alpha=0.85, zorder=2)
+    ax_robot.add_patch(dot)
+    thruster_nodes[name] = dot
+    arr = ax_robot.arrow(x, y, 0, 0, width=0.0, head_width=0.12, head_length=0.12,
+                         length_includes_head=True, color='tab:orange', alpha=0.9, zorder=3)
+    thruster_arrows[name] = arr
+    if name == "T2" or name == "T4":
+        ax_robot.text(x, y+0.12, name, ha='center', va='bottom', fontsize=9, zorder=4)
+    else:
+        ax_robot.text(x, y-0.12, name, ha='center', va='top', fontsize=9, zorder=4)
 
 # Row 2: Roll, Pitch, Yaw
 ax_roll  = fig.add_subplot(gs[2, 0])
@@ -248,10 +287,14 @@ button_groups = {
     "Controller": [
         ("Quick Setup", "[H]\n[U,500,1000,100,100,500]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]"),
         ("Set Yaw", "[Y,0]"),
-        ("Set PID Depth", "[Pn,1,20,0,10]"),
+        ("Set PID Depth", "[Pn,1,10,0.5,5]"),
+        ("Zero PID Depth", "[Pn,1,0,0,0]"),
         ("Set PID Roll", "[Pn,2,0,0,1]"),
+        ("Zero PID Roll", "[Pn,2,0,0,0]"),
         ("Set PID Pitch", "[Pn,3,0,0,1]"),
+        ("Zero PID Pitch", "[Pn,3,0,0,0]"),
         ("Set PID Yaw", "[Pn,4,4,1,2]"),
+        ("Zero PID Yaw", "[Pn,4,0,0,0]"),
         ("Set Windup", "[W,200,200,200,200]"),
         ("Set FF", "[F,0,400,0,0,0]"),
         ("Set Limits", "[U,500,1000,100,100,500]"),
@@ -458,6 +501,54 @@ def update_plot():
                     b.set_height(thrusts[i])
                 ax_thrust.set_ylim(0, 800)
                 # ----------------------------------------
+
+                # ---- Update top-down diagram (CCW order T1,T2,T4,T3) ----
+                thr_vals = {"T1": thrust_1, "T2": thrust_2, "T4": thrust_4, "T3": thrust_3}
+                MAX_THRUST = 800.0
+                ARROW_BOOST = 2.3  # extend more per unit thrust
+                MARGIN = 0.04
+
+                ylow, yhigh = ax_robot.get_ylim()
+
+                # Directions: up for top pair, down for bottom pair
+                dir_map = {
+                    "T1": np.array([0.0, 1.0]),
+                    "T2": np.array([0.0, -1.0]),
+                    "T4": np.array([0.0, -1.0]),
+                    "T3": np.array([0.0, 1.0]),
+                }
+
+                for name in ORDER:
+                    x, y = T_POS[name]
+                    val = thr_vals[name]
+                    direction = dir_map[name]
+
+                    prev = thruster_arrows.get(name)
+                    if prev is not None:
+                        try:
+                            prev.remove()
+                        except Exception:
+                            pass
+
+                    # available room to the edge in the arrow's direction
+                    max_len = (yhigh - MARGIN - y) if direction[1] > 0 else (y - (ylow + MARGIN))
+                    max_len = max(0.0, max_len)
+
+                    # boosted proportional length, clamped to available room
+                    raw_len = (max(0.0, min(val, MAX_THRUST)) / MAX_THRUST) * max_len * ARROW_BOOST
+                    length = min(raw_len, max_len)
+
+                    dx, dy = direction * length
+                    thruster_arrows[name] = ax_robot.arrow(
+                        x, y, dx, dy,
+                        width=0.0, head_width=0.12, head_length=0.12,
+                        length_includes_head=True, color='tab:orange', alpha=0.9, zorder=3
+                    )
+
+                    # optional: dot grows with thrust
+                    base_r = 0.06
+                    thruster_nodes[name].set_radius(base_r + 0.06 * (val / MAX_THRUST))
+                # ----------------------------------------------------------
 
                 updated = True
 
