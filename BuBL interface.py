@@ -270,7 +270,9 @@ button_groups = {
     "Connection": [
         ("NEPTUNE", "!NEPTUNE"),
         ("POSEIDON", "!POSEIDON"),
-        ("PROTEUS", "!PROTEUS"),
+        ("TRITON", "!TRITON"),
+        ("NAUTILUS", "!NAUTILUS"),
+        ("OCEANUS", "!OCEANUS"),
     ],
     "Power": [
         ("Enable", "[E]"),
@@ -285,7 +287,7 @@ button_groups = {
         ("Rotate 360", "[C,0,0,360]"),
     ],
     "Controller": [
-        ("Quick Setup", "[H]\n[U,500,1000,100,100,500]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[W,200,200,200,200]\n[Y,0]"),
+        ("Quick Setup", "[H]\n[U,1000,1000,100,100,500]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[W,200,200,200,200]\n[Y,0]"),
         ("Set Yaw", "[Y,0]"),
         ("Set PID Depth", "[Pn,1,10,0.5,5]"),
         ("Zero PID Depth", "[Pn,1,0,0,0]"),
@@ -326,18 +328,21 @@ button_groups = {
         ("CA3", "[A,3]"),
     ],
 
-    "Experiments": [
-        ("dC", "[dC,200,5,5]"),
-        ("CA4", "[A,4,200,3,10,100,0]"),
-        ("RED", "[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]"),
-    ],
+    # "Experiments": [
+    #     ("dC", "[dC,200,5,5]"),
+    #     ("CA4", "[A,4,200,3,10,100,0]"),
+    #     ("RED", "[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]"),
+    # ],
 
     "Experiments - Swarm": [
-        ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]"),
-        ("Disable All", "!NEPTUNE#[H]#!POSEIDON#[H]"),
+        ("Enable", "!NEPTUNE#[E]#!POSEIDON#[E]"),
+        ("Disable", "!NEPTUNE#[H]#!POSEIDON#[H]"),
+        ("Setup", "!NEPTUNE#[H]\n[U,1000,1000,100,100,500]\n[Pn,1,10,0.5,5]\n[Pn,2,1,3,1]\n#[Pn,3,0,0,1]\n[Pn,4,4,5,2]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]#!POSEIDON#[H]\n[U,1000,1000,100,100,500]\n[Pn,1,10,0.5,5]\n[Pn,2,1,3,1]\n#[Pn,3,0,0,1]\n[Pn,4,4,5,2]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]"),
         ("Set Yaw", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]"),
-        ("Forward All", "!NEPTUNE#[C,500,0,0]#!POSEIDON#[C,500,0,0]"),
-        ("Setup All", "!NEPTUNE#[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,2,4,2]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]#!POSEIDON#[H]\n[U,500,1000,100,100,500]\n[P,20,10,0,2,0,2,4,2]\n[F,0,400,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[Y,0]"),
+        ("Forward", "!NEPTUNE#[C,500,0,0]#!POSEIDON#[C,500,0,0]"),
+        ("Hover", "!NEPTUNE#[C,0,0,0]#!POSEIDON#[C,0,0,0]"),
+        ("Attach", "!NEPTUNE#[C,1000,0,0]#!POSEIDON#[C,1000,0,0]"),
+        ("Detach", "!NEPTUNE#[C,-1000,0,1000]#!POSEIDON#[C,-1000,0,-1000]"),
     ]
 }
 
