@@ -322,12 +322,34 @@ button_groups = {
         ("Note Start", "[N,start]"),
         ("Note Stop", "[N,stop]"),
     ],
-    "Autonomy": [
-        ("STOP", "[A,0]"),
-        ("CA1", "[A,1,200,50,0,0]"),
-        ("CA2", "[A,2,200,0,200,0]"),
-        ("CA3", "[A,3]"),
+    # "Autonomy": [
+    #     ("STOP", "[A,0]"),
+    #     ("CA1", "[A,1,200,50,0,0]"),
+    #     ("CA2", "[A,2,200,0,200,0]"),
+    #     ("CA3", "[A,3]"),
+    #     ("TRACK", "[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]"),
+    # ],
+
+    "Thrust Stand Experiments": [
+        ("35% Forward", "[eC,280,0,280,0]"),
+        ("35% Reverse", "[eC,0,280,0,280]"),
+        ("50% Forward", "[eC,400,0,400,0]"),
+        ("50% Reverse", "[eC,0,400,0,400]"),
+        ("75% Forward", "[eC,600,0,600,0]"),
+        ("75% Reverse", "[eC,0,600,0,600]"),
+        ("100% Forward", "[eC,800,0,800,0]"),
+        ("100% Reverse", "[eC,0,800,0,800]"),
     ],
+    #[A,6,{mode},{amplitude\degrees},{frequency\Hz},{phase/radians},{forward_bias},{desired_depth/cm}]
+    "Misc Experiments": [
+        ("Wiggle Absolute", "[A,6,1,180,1,0,0,0]"),
+        ("Wiggle Relative", "[A,6,2,180,1,0,0,0]"),
+        ("Wiggle Forward", "[A,6,1,180,1,0,300,0]"),
+        ("Wiggle Backward", "[A,6,1,180,1,0,-300,0]"),
+        ("Wiggle Fast", "[A,6,1,360,2,0,0,0]"),
+        ("Wiggle Slow", "[A,6,1,180,0.5,0,0,0]"),
+        ("STOP", "[A,0]\n[C,0,0,0]\n[H]"),
+    ]
 
     # "Experiments": [
     #     ("dC", "[dC,200,5,5]"),
@@ -335,20 +357,20 @@ button_groups = {
     #     ("RED", "[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]"),
     # ],
 
-    "Experiments - Swarm": [
-        ("Enable", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
-        ("Disable", "!NEPTUNE#[H]#!POSEIDON#[H]#!TRITON#[H]#!NAUTILUS#[H]#!OCEANUS#[H]"),
-        ("Set Yaw", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
-        ("Record", "!NEPTUNE#[R,3,20]#!POSEIDON#[R,3,20]#!TRITON#[R,3,20]#!NAUTILUS#[R,3,20]#!OCEANUS#[R,3,20]"),
-        ("Stop Record", "!NEPTUNE#[R,0,10]#!POSEIDON#[R,0,10]"),
-        ("Note Start Test", "!NEPTUNE#[N,Start]#!POSEIDON#[N,Start]#!TRITON#[N,Start]#!NAUTILUS#[N,Start]#!OCEANUS#[N,Start]"),
-        ("Note Stop Test", "!NEPTUNE#[N,Stop]#!POSEIDON#[N,Stop]#!TRITON#[N,Stop]#!NAUTILUS#[N,Stop]#!OCEANUS#[N,Stop]"),
-        ("Note Good", "!NEPTUNE#[N,good]#!POSEIDON#[N,good]#!TRITON#[N,good]#!NAUTILUS#[N,good]#!OCEANUS#[N,good]"),
-        ("Note Bad", "!NEPTUNE#[N,Bad]#!POSEIDON#[N,Bad]#!TRITON#[N,Bad]#!NAUTILUS#[N,Bad]#!OCEANUS#[N,Bad]"),
-        ("Forward", "!NEPTUNE#[C,1000,0,0]#!POSEIDON#[C,1000,0,0]#!TRITON#[C,1000,0,0]#!NAUTILUS#[C,1000,0,0]#!OCEANUS#[C,1000,0,0]"),
-        ("Attach", "!NEPTUNE#[C,1000,0,0]#!POSEIDON#[C,1000,0,0]"),
-        ("Detach", "!NEPTUNE#[C,-1000,0,1000]#!POSEIDON#[C,-1000,0,-1000]"),
-    ]
+    # "Experiments - Swarm": [
+    #     ("Enable", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
+    #     ("Disable", "!NEPTUNE#[H]#!POSEIDON#[H]#!TRITON#[H]#!NAUTILUS#[H]#!OCEANUS#[H]"),
+    #     ("Set Yaw", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
+    #     ("Record", "!NEPTUNE#[R,3,20]#!POSEIDON#[R,3,20]#!TRITON#[R,3,20]#!NAUTILUS#[R,3,20]#!OCEANUS#[R,3,20]"),
+    #     ("Stop Record", "!NEPTUNE#[R,0,10]#!POSEIDON#[R,0,10]"),
+    #     ("Note Start Test", "!NEPTUNE#[N,Start]#!POSEIDON#[N,Start]#!TRITON#[N,Start]#!NAUTILUS#[N,Start]#!OCEANUS#[N,Start]"),
+    #     ("Note Stop Test", "!NEPTUNE#[N,Stop]#!POSEIDON#[N,Stop]#!TRITON#[N,Stop]#!NAUTILUS#[N,Stop]#!OCEANUS#[N,Stop]"),
+    #     ("Note Good", "!NEPTUNE#[N,good]#!POSEIDON#[N,good]#!TRITON#[N,good]#!NAUTILUS#[N,good]#!OCEANUS#[N,good]"),
+    #     ("Note Bad", "!NEPTUNE#[N,Bad]#!POSEIDON#[N,Bad]#!TRITON#[N,Bad]#!NAUTILUS#[N,Bad]#!OCEANUS#[N,Bad]"),
+    #     ("Forward", "!NEPTUNE#[C,1000,0,0]#!POSEIDON#[C,1000,0,0]#!TRITON#[C,1000,0,0]#!NAUTILUS#[C,1000,0,0]#!OCEANUS#[C,1000,0,0]"),
+    #     ("Attach", "!NEPTUNE#[C,1000,0,0]#!POSEIDON#[C,1000,0,0]"),
+    #     ("Detach", "!NEPTUNE#[C,-1000,0,1000]#!POSEIDON#[C,-1000,0,-1000]"),
+    # ]
 }
 
 for col, (group_name, items) in enumerate(button_groups.items()):
