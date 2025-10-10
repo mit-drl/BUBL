@@ -19,7 +19,7 @@ import time
 
 try:
     # change for correct serial port
-    ser = serial.Serial('COM7', 921600, timeout=0.1)
+    ser = serial.Serial('COM4', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     exit(1)
@@ -332,22 +332,44 @@ button_groups = {
 
     "Thrust Stand Experiments": [
         ("35% Forward", "[eC,280,0,280,0]"),
-        ("35% Reverse", "[eC,0,280,0,280]"),
+        ("40% Forward", "[eC,320,0,320,0]"),
+        ("45% Forward", "[eC,360,0,360,0]"),
         ("50% Forward", "[eC,400,0,400,0]"),
-        ("50% Reverse", "[eC,0,400,0,400]"),
+        ("55% Forward", "[eC,440,0,440,0]"),
+        ("60% Forward", "[eC,480,0,480,0]"),
+        ("65% Forward", "[eC,520,0,520,0]"),
+        ("70% Forward", "[eC,560,0,560,0]"),
         ("75% Forward", "[eC,600,0,600,0]"),
-        ("75% Reverse", "[eC,0,600,0,600]"),
+        ("80% Forward", "[eC,640,0,640,0]"),
+        ("85% Forward", "[eC,680,0,680,0]"),
+        ("90% Forward", "[eC,720,0,720,0]"),
+        ("95% Forward", "[eC,760,0,760,0]"),
         ("100% Forward", "[eC,800,0,800,0]"),
-        ("100% Reverse", "[eC,0,800,0,800]"),
     ],
+
+# "Thrust Stand Experiments reverse": [
+#         ("35% Forward", "[eC,0,280,0,280]"),
+#         ("40% Forward", "[eC,0,320,0,320]"),
+#         ("45% Forward", "[eC,0,360,0,360]"),
+#         ("50% Forward", "[eC,0,400,0,400]"),
+#         ("55% Forward", "[eC,0,440,0,440]"),
+#         ("60% Forward", "[eC,0,480,0,480]"),
+#         ("65% Forward", "[eC,0,520,0,520]"),
+#         ("70% Forward", "[eC,0,560,0,560]"),
+#         ("75% Forward", "[eC,0,600,0,600]"),
+#         ("80% Forward", "[eC,0,640,0,640]"),
+#         ("85% Forward", "[eC,0,680,0,680]"),
+#         ("90% Forward", "[eC,0,720,0,720]"),
+#         ("95% Forward", "[eC,0,760,0,760]"),
+#         ("100% Forward", "[eC,0,800,0,800]"),
+#     ],
+
     #[A,6,{mode},{amplitude\degrees},{frequency\Hz},{phase/radians},{forward_bias},{desired_depth/cm}]
     "Misc Experiments": [
-        ("Wiggle Absolute", "[A,6,1,180,1,0,0,0]"),
-        ("Wiggle Relative", "[A,6,2,180,1,0,0,0]"),
-        ("Wiggle Forward", "[A,6,1,180,1,0,300,0]"),
-        ("Wiggle Backward", "[A,6,1,180,1,0,-300,0]"),
-        ("Wiggle Fast", "[A,6,1,360,2,0,0,0]"),
-        ("Wiggle Slow", "[A,6,1,180,0.5,0,0,0]"),
+        ("Wiggle Setup", "[U,1000,1000,100,100,500]\n[F,0,800,0,0,0]"),
+        ("Wiggle Surface", "[A,6,2,1000,1,90,500,0]"),
+        ("Wiggle Depth", "[A,6,2,1000,1,90,500,10]"),
+        ("Square", "[A,7,90,5,600,0"),
         ("STOP", "[A,0]\n[C,0,0,0]\n[H]"),
     ]
 
