@@ -19,7 +19,7 @@ import time
 
 try:
     # change for correct serial port
-    ser = serial.Serial('COM4', 921600, timeout=0.1)
+    ser = serial.Serial('COM7', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     exit(1)
@@ -74,23 +74,28 @@ cbar.set_label("LiDAR Value", fontsize=12)
 
 # --- Additional Sensor Axes ---
 # Row 1: Depth, Forward, and NEW Thrust Bars
-ax_depth = fig.add_subplot(gs[1, 0])
-ax_fwd   = fig.add_subplot(gs[1, 1])
+ax_fwd   = fig.add_subplot(gs[1, 0])
+ax_depth = fig.add_subplot(gs[1, 1])
 ax_depth.set_title("Depth")
 ax_fwd.set_title("Forward")
 line_depth, = ax_depth.plot([], [], '-', color='blue')
 line_fwd,   = ax_fwd.plot([], [], '-', color='red')
 
 # NEW: Thrust bar chart (Rows 1–2, Col 2)
-ax_thrust = fig.add_subplot(gs[1:3, 2])   # spans row 1 and 2
+ax_thrust = fig.add_subplot(gs[2:4, 2])   # spans row 1 and 2
 ax_thrust.set_title("Thrusts")
 bar_positions = np.arange(4)
 bar_labels = ["T1", "T2", "T3", "T4"]
 bar_container = ax_thrust.bar(bar_positions, [0, 0, 0, 0])
 ax_thrust.set_xticks(bar_positions, bar_labels)
 ax_thrust.axhline(0, linewidth=1)
-ax_thrust.set_ylabel("Thrust (0–800)")
+# ax_thrust.set_ylabel("Thrust")
 ax_thrust.set_ylim(0, 800)
+
+# --- Fluid temperature (Row 4, Col 3) ---
+ax_temperature = fig.add_subplot(gs[3, 3])
+ax_temperature.set_title("Temperature")
+line_temp = ax_depth.plot([], [], '-', color='blue')
 
 # --- Robot top-down diagram (Rows 1–2, Col 3) ---
 ax_robot = fig.add_subplot(gs[1:3, 3])
@@ -131,7 +136,7 @@ for name in ORDER:
 # Row 2: Roll, Pitch, Yaw
 ax_roll  = fig.add_subplot(gs[2, 0])
 ax_pitch = fig.add_subplot(gs[2, 1])
-ax_yaw   = fig.add_subplot(gs[3, 2])
+ax_yaw   = fig.add_subplot(gs[1, 2])
 ax_roll.set_title("Roll")
 ax_pitch.set_title("Pitch")
 ax_yaw.set_title("Yaw")
@@ -142,6 +147,9 @@ line_yaw,   = ax_yaw.plot([], [], '-', color='blue')
 # NEW: Autonomous sensor lines on Depth and Yaw axes.
 line_autonomous_depth, = ax_depth.plot([], [], '-', color='red')
 line_autonomous_yaw,   = ax_yaw.plot([], [], '-', color='red')
+
+# temperature
+line_temperature, = ax_temperature.plot([], [], '-', color='blue')
 
 # Row 3: Voltage and Current
 ax_voltage = fig.add_subplot(gs[3, 0])
@@ -161,6 +169,7 @@ history_pitch   = []
 history_yaw     = []
 history_voltage = []
 history_current = []
+history_temperature = []
 history_autonomous_fwd   = []
 history_autonomous_depth = []
 history_autonomous_yaw   = []
@@ -311,14 +320,12 @@ button_groups = {
         ("Stop Stream", "[B,0]"),
         ("Capture Image", "[O,1,1]"),
         ("Capture Audio", "[I,3]"),
-        ("Record All Data", "[R,1,5]"),
-        ("Record Basic Data", "[R,2,10]"),
-        ("Record Power Data", "[R,3,20]"),
-        ("Record Roll", "[R,5,50]"),
-        ("Record Pitch", "[R,6,50]"),
-        ("Record Yaw", "[R,7,50]"),
-        ("Record Thrust", "[R,8,20]"),
         ("Stop Recording", "[R,0,1]"),
+        ("Record All", "[R,1,10]"),
+        ("Record Basic", "[R,2,20]"),
+        ("Record Power", "[R,3,50]"),
+        ("Record RPY", "[R,4,50]"),
+        ("Record Thrust", "[R,5,50]"),
         ("Note Start", "[N,start]"),
         ("Note Stop", "[N,stop]"),
     ],
@@ -454,8 +461,8 @@ def update_plot():
                     thrust_2            = float(tokens[42])
                     thrust_3            = float(tokens[43])
                     thrust_4            = float(tokens[44])
-
-                    debug_1 = float(tokens[45])
+                    temperature_val     = float(tokens[45])
+                    # print(temperature_val)
 
                 except ValueError as e:
                     print(f"Error parsing data from line:\n  {line}\n{e}")
@@ -482,6 +489,7 @@ def update_plot():
                 history_yaw.append(yaw_val)
                 history_voltage.append(voltage_val)
                 history_current.append(current_val)
+                history_temperature.append(temperature_val)
                 history_autonomous_fwd.append(autonomous_fwd)
                 history_autonomous_depth.append(autonomous_depth)
                 history_autonomous_yaw.append(autonomous_yaw)
@@ -494,6 +502,7 @@ def update_plot():
                     history_yaw.pop(0)
                     history_voltage.pop(0)
                     history_current.pop(0)
+                    history_temperature.pop(0)
                     history_autonomous_fwd.pop(0)
                     history_autonomous_depth.pop(0)
                     history_autonomous_yaw.pop(0)
@@ -548,6 +557,13 @@ def update_plot():
                 ax_current.set_xlim(0, history_length)
                 ax_current.relim()
                 ax_current.autoscale_view()
+
+                # Update Temperature plot.
+                x_vals = list(range(len(history_temperature)))
+                line_temperature.set_data(x_vals, history_temperature)
+                ax_temperature.set_xlim(0, history_length)
+                ax_temperature.relim()
+                ax_temperature.autoscale_view()
 
                 # -------- NEW: Update Thrust Bars --------
                 thrusts = [thrust_1, thrust_2, thrust_3, thrust_4]
