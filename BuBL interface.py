@@ -337,20 +337,45 @@ button_groups = {
     #     ("TRACK", "[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]"),
     # ],
 
-    "Thrust Stand Experiments": [
-        ("35% Forward", "[eC,280,0,280,0]"),
+# "Thrust Experiments": [
+#         ("40% Forward", "[eC,320,0,320,0]"),
+#         ("45% Forward", "[eC,360,0,360,0]"),
+#         ("50% Forward", "[eC,400,0,400,0]"),
+#         ("55% Forward", "[eC,440,0,440,0]"),
+#         ("60% Forward", "[eC,480,0,480,0]"),
+#         ("65% Forward", "[eC,520,0,520,0]"),
+#         ("70% Forward", "[eC,560,0,560,0]"),
+#         ("75% Forward", "[eC,600,0,600,0]"),
+#         ("80% Forward", "[eC,640,0,640,0]"),
+#         ("85% Forward", "[eC,680,0,680,0]"),
+#         ("90% Forward", "[eC,720,0,720,0]"),
+#         ("95% Forward", "[eC,760,0,760,0]"),
+#         ("100% Forward", "[eC,800,0,800,0]"),
+#     ],
+
+    "Thrust - Triton": [
+        ("Connect", "!TRITON"),
+        ("Setup", "[M,280,900]"),
+        ("Disable", "[H]"),
         ("40% Forward", "[eC,320,0,320,0]"),
-        ("45% Forward", "[eC,360,0,360,0]"),
         ("50% Forward", "[eC,400,0,400,0]"),
-        ("55% Forward", "[eC,440,0,440,0]"),
         ("60% Forward", "[eC,480,0,480,0]"),
-        ("65% Forward", "[eC,520,0,520,0]"),
         ("70% Forward", "[eC,560,0,560,0]"),
-        ("75% Forward", "[eC,600,0,600,0]"),
         ("80% Forward", "[eC,640,0,640,0]"),
-        ("85% Forward", "[eC,680,0,680,0]"),
         ("90% Forward", "[eC,720,0,720,0]"),
-        ("95% Forward", "[eC,760,0,760,0]"),
+        ("100% Forward", "[eC,800,0,800,0]"),
+    ],
+
+    "Thrust - Neptune": [
+        ("Connect", "!NEPTUNE"),
+        ("Setup", "[M,280,900]"),
+        ("Disable", "[H]"),
+        ("40% Forward", "[eC,320,0,320,0]"),
+        ("50% Forward", "[eC,400,0,400,0]"),
+        ("60% Forward", "[eC,480,0,480,0]"),
+        ("70% Forward", "[eC,560,0,560,0]"),
+        ("80% Forward", "[eC,640,0,640,0]"),
+        ("90% Forward", "[eC,720,0,720,0]"),
         ("100% Forward", "[eC,800,0,800,0]"),
     ],
 
@@ -477,7 +502,7 @@ def update_plot():
                 voltage_val = sensor_values[4]
                 current_val = sensor_values[5]
 
-                autonomous_yaw = yaw_val + autonomous_yaw
+                # autonomous_yaw = yaw_val + autonomous_yaw
 
                 img_left.set_data(left_scan)
                 img_right.set_data(right_scan)
