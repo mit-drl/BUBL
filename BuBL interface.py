@@ -12,13 +12,20 @@ import os
 import glob
 import matplotlib.image as mpimg
 import time
+import matplotlib as mpl
+mpl.rcParams.update({
+    "font.size": 8,
+    "axes.titlesize": 9,
+    "axes.labelsize": 8,
+    "lines.linewidth": 0.8,
+})
 
 # -----------------------
 # Serial Port
 # -----------------------
 try:
     # change for correct serial port
-    ser = serial.Serial('COM14', 921600, timeout=0.1)
+    ser = serial.Serial('COM4', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     sys.exit(1)
@@ -29,7 +36,7 @@ serial_queue = queue.Queue()
 # Serial Reader Thread
 # -----------------------
 def serial_reader():
-    """Read raw bytes, assemble complete '\\n'-terminated lines, push only full lines."""
+    """Read raw bytes, assemble complete '\n'-terminated lines, push only full lines."""
     buf = bytearray()
     MAX_BUF = 1_000_000
     while True:
@@ -66,13 +73,14 @@ threading.Thread(target=serial_reader, daemon=True).start()
 # -----------------------
 # Figure & Layout
 # -----------------------
-fig = plt.figure(figsize=(16, 11))
+fig = plt.figure(figsize=(16, 20))
 # 4 rows, 4 cols. Row 0 tall for LiDARs; rows 1–2 for sensors; row 3 for power/audio
 gs = gridspec.GridSpec(
     4, 4, figure=fig,
-    hspace=0.35, wspace=0.25,
+    hspace=0.25, wspace=0.25,
     height_ratios=[3, 1, 1, 1]
 )
+gs.update(left=0.1, right=0.99, top=0.96, bottom=0.22, wspace=0.17, hspace=0.20)
 
 # Row 0 (top): LiDARs; col 1 intentionally EMPTY; image sits at col 3
 ax_lidar_left  = fig.add_subplot(gs[0, 0])
@@ -97,13 +105,13 @@ centroid_left_pt, = ax_lidar_left.plot([], [], marker='o', linestyle='None',
 centroid_right_pt, = ax_lidar_right.plot([], [], marker='o', linestyle='None',
                                          markerfacecolor='black', markeredgecolor='black',
                                          markersize=8, zorder=5)
-txt_lidar_left_dist = ax_lidar_left.text(0.5, -0.12, "", transform=ax_lidar_left.transAxes,
-                                         ha='center', va='top', fontsize=10)
-txt_lidar_right_dist = ax_lidar_right.text(0.5, -0.12, "", transform=ax_lidar_right.transAxes,
-                                           ha='center', va='top', fontsize=10)
+txt_lidar_left_dist = ax_lidar_left.text(0.98, -0.03, "", transform=ax_lidar_left.transAxes,
+                                         ha='center', va='top', fontsize=8)
+txt_lidar_right_dist = ax_lidar_right.text(0.98, -0.03, "", transform=ax_lidar_right.transAxes,
+                                           ha='center', va='top', fontsize=8)
 
 # Colorbar for LiDARs
-cbar_ax = fig.add_axes([0.70, 0.60, 0.01, 0.25])
+cbar_ax = fig.add_axes([0.765, 0.65, 0.01, 0.30])
 cbar = fig.colorbar(img_left, cax=cbar_ax)
 
 # Load interface_image (same directory as script), keep aspect equal
@@ -136,11 +144,11 @@ def _load_interface_image():
         return False
 _load_interface_image()
 
-# Row 1: Thrust (fwd), Depth, Yaw, Motors (top half)
+# Row 1: Thrust (fwd), Depth, Yaw, Motors (span into bottom row)
 ax_fwd   = fig.add_subplot(gs[1, 0])
 ax_depth = fig.add_subplot(gs[1, 1])
 ax_yaw   = fig.add_subplot(gs[1, 2])
-ax_thrust = fig.add_subplot(gs[1:3, 3])   # double tall immediately below image (rows 1–2)
+ax_thrust = fig.add_subplot(gs[1:, 3])   # spans rows 1–3 (taller)
 
 ax_fwd.set_title("Thrust")
 ax_depth.set_title("Depth")
@@ -156,10 +164,10 @@ ax_roll.set_title("Roll")
 ax_pitch.set_title("Pitch")
 ax_temperature.set_title("Temperature")
 
-# Row 3: Voltage, Current, Audio Level; col 3 intentionally EMPTY
+# Row 3: Voltage, Current, Audio Level; col 3 is covered by Motors
 ax_voltage = fig.add_subplot(gs[3, 0])
 ax_current = fig.add_subplot(gs[3, 1])
-ax_audio   = fig.add_subplot(gs[3, 2])  # NEW: right below Temperature
+ax_audio   = fig.add_subplot(gs[3, 2])
 ax_voltage.set_title("Voltage")
 ax_current.set_title("Current")
 ax_audio.set_title("Filtered Audio Level")
@@ -177,7 +185,7 @@ line_pitch,      = ax_pitch.plot([], [], '-', color='blue')
 line_voltage,    = ax_voltage.plot([], [], '-', color='blue')
 line_current,    = ax_current.plot([], [], '-', color='blue')
 line_temperature,= ax_temperature.plot([], [], '-', color='blue')
-line_audio,      = ax_audio.plot([], [], '-', color='blue')  # NEW
+line_audio,      = ax_audio.plot([], [], '-', color='blue')
 
 bar_positions = np.arange(4)
 bar_labels    = ["T1", "T2", "T3", "T4"]
@@ -197,7 +205,7 @@ history_yaw     = []
 history_voltage = []
 history_current = []
 history_temperature = []
-history_audio_level = []          # NEW
+history_audio_level = []
 history_autonomous_fwd   = []
 history_autonomous_depth = []
 history_autonomous_yaw   = []
@@ -207,7 +215,7 @@ history_autonomous_yaw   = []
 # -----------------------
 root = tk.Tk()
 root.title("BuBL Command Interface")
-root.geometry("1720x1250")
+root.geometry("1200x800")
 
 root.rowconfigure(0, weight=1)
 root.rowconfigure(1, weight=0)
@@ -215,6 +223,11 @@ root.columnconfigure(0, weight=1)
 
 # Canvas Frame
 canvas_frame = ttk.Frame(root)
+
+# Fix the drawing area so it never grows when data/text appears
+canvas_w, canvas_h = 1000, 600
+canvas_frame.configure(width=canvas_w, height=canvas_h)
+canvas_frame.pack_propagate(False)
 canvas_frame.grid(row=0, column=0, sticky="nsew")
 
 canvas = FigureCanvasTkAgg(fig, master=canvas_frame)
@@ -222,11 +235,48 @@ canvas_widget = canvas.get_tk_widget()
 canvas_widget.pack(fill=tk.BOTH, expand=True)
 canvas_widget.pack_configure(pady=0)
 
+# --- FIX FIGURE SIZE (final) ---
+def freeze_figure_size(event=None):
+    """Lock figure size to the current canvas pixel size."""
+    w_px = canvas_widget.winfo_width()
+    h_px = canvas_widget.winfo_height()
+    dpi = fig.get_dpi()
+    if w_px > 0 and h_px > 0:
+        fig.set_size_inches(w_px / dpi, h_px / dpi, forward=True)
+        fig.canvas.draw_idle()
+
+canvas_widget.bind("<Configure>", freeze_figure_size)
+freeze_figure_size()
+
+# -----------------------
+# Hide ALL x-axis ticks/labels
+# -----------------------
+for ax in (
+    ax_fwd, ax_depth, ax_yaw, ax_roll, ax_pitch,
+    ax_temperature, ax_voltage, ax_current, ax_audio
+):
+    ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+    ax.set_xlabel('')
+
+# -----------------------
+# Freeze layout (prevents subplot size shifts)
+# -----------------------
+def freeze_layout(fig):
+    fig.canvas.draw_idle()
+    fig.canvas.flush_events()
+    for ax in fig.axes:
+        pos = ax.get_position()
+        ax.set_position(pos)
+        ax.set_autoscale_on(False)
+freeze_layout(fig)
+
+# -----------------------
 # Control Frame
+# -----------------------
 control_frame = ttk.Frame(root)
 control_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
-# FPS Label
+# FPS (kept as-is; remove if you don't want it)
 fps_label = ttk.Label(root, text="FPS: ", font=("Segoe UI", 10))
 fps_label.place(x=2, y=0)
 _fps = {"frames": 0, "t0": time.perf_counter()}
@@ -247,9 +297,9 @@ ax_roll.set_ylim(-30, 30)
 ax_pitch.set_ylim(-30, 30)
 ax_yaw.set_ylim(-200, 200)
 ax_voltage.set_ylim(0, 5)
-ax_current.set_ylim(0, 5)
-ax_temperature.set_ylim(0, 40)
-ax_audio.set_ylim(0, 100)  # NEW: 0–100 as requested
+ax_current.set_ylim(0, 3)
+ax_temperature.set_ylim(10, 35)
+ax_audio.set_ylim(0, 100)
 for a in (ax_fwd, ax_depth, ax_roll, ax_pitch, ax_yaw, ax_voltage, ax_current, ax_temperature, ax_audio):
     a.set_xlim(0, history_length)
 
@@ -258,11 +308,11 @@ for a in (ax_fwd, ax_depth, ax_roll, ax_pitch, ax_yaw, ax_voltage, ax_current, a
 # -----------------------
 def make_value_text(ax):
     return ax.text(
-        0.025, 0.95, "",
+        -0.01, 0.96, "",
         transform=ax.transAxes,
         ha="left", va="top",
-        fontsize=10,
-        bbox=dict(facecolor="white", alpha=1.0, edgecolor="black", linewidth=0.5),
+        fontsize=8,
+        bbox= None,
         zorder=10
     )
 
@@ -274,13 +324,13 @@ txt_yaw         = make_value_text(ax_yaw)
 txt_voltage     = make_value_text(ax_voltage)
 txt_current     = make_value_text(ax_current)
 txt_temperature = make_value_text(ax_temperature)
-txt_audio       = make_value_text(ax_audio)   # NEW
+txt_audio       = make_value_text(ax_audio)
 
 def update_value_texts():
     if history_autonomous_fwd:
         txt_fwd.set_text(f"{history_autonomous_fwd[-1]:7.1f}")
     if history_depth:
-        txt_depth.set_text(f"{history_depth[-1]:7.2f}")
+        txt_depth.set_text(f"{history_depth[-1]:7.1f}")
     if history_roll:
         txt_roll.set_text(f"{history_roll[-1]:7.2f}")
     if history_pitch:
@@ -292,9 +342,9 @@ def update_value_texts():
     if history_current:
         txt_current.set_text(f"{history_current[-1]:7.2f}")
     if history_temperature:
-        txt_temperature.set_text(f"{history_temperature[-1]:7.2f}")
+        txt_temperature.set_text(f"{history_temperature[-1]:7.1f}")
     if history_audio_level:
-        txt_audio.set_text(f"{history_audio_level[-1]:7.1f}")  # NEW
+        txt_audio.set_text(f"{history_audio_level[-1]:7.1f}")
 
 # -----------------------
 # Command Entry & Buttons
@@ -394,8 +444,6 @@ button_groups = {
         ("Zero PID Pitch", "[Pn,3,0,0,0]"),
         ("Set PID Yaw", "[Pn,4,4,1,2]"),
         ("Zero PID Yaw", "[Pn,4,0,0,0]"),
-        ("Set Windup", "[W,200,200,200,200]"),
-        ("Set FF", "[F,0,400,0,0,0]"),
     ],
     "Calibrations": [
         ("Gyro Cal", "[G]"),
@@ -412,8 +460,6 @@ button_groups = {
         ("Record Power", "[R,3,50]"),
         ("Record RPY", "[R,4,50]"),
         ("Record Thrust", "[R,5,50]"),
-        ("Note Start", "[N,start]"),
-        ("Note Stop", "[N,stop]"),
     ],
     "Thrust - Triton": [
         ("Connect", "!TRITON"),
@@ -427,18 +473,18 @@ button_groups = {
         ("90% Forward", "[eC,720,0,720,0]"),
         ("100% Forward", "[eC,800,0,800,0]"),
     ],
-    "Thrust - Neptune": [
-        ("Connect", "!NEPTUNE"),
-        ("Setup", "[M,280,900]"),
-        ("Disable", "[H]"),
-        ("40% Forward", "[eC,320,0,320,0]"),
-        ("50% Forward", "[eC,400,0,400,0]"),
-        ("60% Forward", "[eC,480,0,480,0]"),
-        ("70% Forward", "[eC,560,0,560,0]"),
-        ("80% Forward", "[eC,640,0,640,0]"),
-        ("90% Forward", "[eC,720,0,720,0]"),
-        ("100% Forward", "[eC,800,0,800,0]"),
-    ],
+    # "Thrust - Neptune": [
+    #     ("Connect", "!NEPTUNE"),
+    #     ("Setup", "[M,280,900]"),
+    #     ("Disable", "[H]"),
+    #     ("40% Forward", "[eC,320,0,320,0]"),
+    #     ("50% Forward", "[eC,400,0,400,0]"),
+    #     ("60% Forward", "[eC,480,0,480,0]"),
+    #     ("70% Forward", "[eC,560,0,560,0]"),
+    #     ("80% Forward", "[eC,640,0,640,0]"),
+    #     ("90% Forward", "[eC,720,0,720,0]"),
+    #     ("100% Forward", "[eC,800,0,800,0]"),
+    # ],
     "Misc Experiments": [
         ("Wiggle Setup", "[U,1000,1000,100,100,500]\n[F,0,800,0,0,0]"),
         ("Wiggle Surface", "[A,6,2,1000,1,90,500,0]"),
@@ -486,17 +532,13 @@ fig.canvas.mpl_connect("draw_event", _on_draw)
 
 # Animated artists
 ANIMATED = [
-    # lines
     line_depth, line_autonomous_depth, line_fwd,
     line_roll, line_pitch, line_yaw, line_autonomous_yaw,
-    line_voltage, line_current, line_temperature, line_audio,  # NEW includes audio
-    # lidar images & annotations
+    line_voltage, line_current, line_temperature, line_audio,
     img_left, img_right, centroid_left_pt, centroid_right_pt,
     txt_lidar_left_dist, txt_lidar_right_dist,
-    # bars
     *list(bar_container),
-    # numeric overlays
-    txt_fwd, txt_depth, txt_roll, txt_pitch, txt_yaw, txt_voltage, txt_current, txt_temperature, txt_audio  # NEW
+    txt_fwd, txt_depth, txt_roll, txt_pitch, txt_yaw, txt_voltage, txt_current, txt_temperature, txt_audio
 ]
 for a in ANIMATED:
     a.set_animated(True)
@@ -558,8 +600,7 @@ def update_plot():
             thrust_3            = float(tokens[43])
             thrust_4            = float(tokens[44])
             temperature_val     = float(tokens[45])
-            audio_level         = float(tokens[46])  # NEW
-            # centroid/distance values shift by +1
+            audio_level         = float(tokens[46])
             centroid_left_row   = float(tokens[47])
             centroid_left_col   = float(tokens[48])
             distance_left       = float(tokens[49])
@@ -578,8 +619,8 @@ def update_plot():
         img_right.set_data(right_scan)
         centroid_left_pt.set_data([centroid_left_col], [centroid_left_row])
         centroid_right_pt.set_data([centroid_right_col], [centroid_right_row])
-        txt_lidar_left_dist.set_text(f"{distance_left:.2f}")
-        txt_lidar_right_dist.set_text(f"{distance_right:.2f}")
+        txt_lidar_left_dist.set_text(f"{int(distance_left)}")
+        txt_lidar_right_dist.set_text(f"{int(distance_right)}")
         centroid_left_pt.set_visible(distance_left < 250)
         centroid_right_pt.set_visible(distance_right < 250)
 
@@ -591,7 +632,7 @@ def update_plot():
         history_voltage.append(voltage_val)
         history_current.append(current_val)
         history_temperature.append(temperature_val)
-        history_audio_level.append(audio_level)  # NEW
+        history_audio_level.append(audio_level)
         history_autonomous_fwd.append(autonomous_fwd)
         history_autonomous_depth.append(autonomous_depth)
         history_autonomous_yaw.append(autonomous_yaw)
@@ -613,7 +654,7 @@ def update_plot():
         line_voltage.set_data(range(len(history_voltage)), history_voltage)
         line_current.set_data(range(len(history_current)), history_current)
         line_temperature.set_data(range(len(history_temperature)), history_temperature)
-        line_audio.set_data(range(len(history_audio_level)), history_audio_level)  # NEW
+        line_audio.set_data(range(len(history_audio_level)), history_audio_level)
 
         # Overlays
         update_value_texts()
