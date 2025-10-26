@@ -25,7 +25,7 @@ mpl.rcParams.update({
 # -----------------------
 try:
     # change for correct serial port
-    ser = serial.Serial('COM4', 921600, timeout=0.1)
+    ser = serial.Serial('COM7', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     sys.exit(1)
@@ -170,7 +170,7 @@ ax_current = fig.add_subplot(gs[3, 1])
 ax_audio   = fig.add_subplot(gs[3, 2])
 ax_voltage.set_title("Voltage")
 ax_current.set_title("Current")
-ax_audio.set_title("Filtered Audio Level")
+ax_audio.set_title("Audio Level")
 
 # -----------------------
 # Plot Artists
@@ -425,16 +425,18 @@ button_groups = {
         ("Enable", "[E]"),
         ("Disable", "[H]"),
     ],
-    "Motion": [
-        ("Surface", "[C,0,0,0]"),
+    "Motion & Calibration": [
+        ("Hover", "[C,0,0,0]"),
         ("Dive", "[C,0,10,0]"),
         ("Forward", "[C,500,0,0]"),
         ("Reverse", "[C,-500,0,0]"),
-        ("Rotate 180", "[C,0,0,180]"),
-        ("Rotate 360", "[C,0,0,360]"),
+        ("Rotate 0", "[C,0,0,360]"),
+        ("Rotate 360", "[C,0,0,180]"),
+        ("Gyro Cal", "[G]"),
+        ("LiDAR Cal", "[V]"),
     ],
     "Controller": [
-        ("Quick Setup", "[H]\n[U,1000,1000,100,100,500]\n[F,0,800,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[W,200,200,200,200]\n[Y,0]"),
+        ("Quick Setup", "[H]\n[U,1000,1000,100,100,500]\n[F,0,800,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[W,200,200,200,200]\n[M,280,900]\n[Y,0]"),
         ("Set Yaw", "[Y,0]"),
         ("Set PID Depth", "[Pn,1,20,1,5]"),
         ("Zero PID Depth", "[Pn,1,0,0,0]"),
@@ -445,58 +447,102 @@ button_groups = {
         ("Set PID Yaw", "[Pn,4,4,1,2]"),
         ("Zero PID Yaw", "[Pn,4,0,0,0]"),
     ],
-    "Calibrations": [
-        ("Gyro Cal", "[G]"),
-        ("LiDAR Cal", "[V]"),
-    ],
     "Data & Recording": [
         ("Stream", "[B,1]"),
         ("Stop Stream", "[B,0]"),
         ("Capture Image", "[O,1,1]"),
         ("Capture Audio", "[I,3]"),
-        ("Stop Recording", "[R,0,1]"),
         ("Record All", "[R,1,10]"),
+        ("Stop Recording", "[R,0,1]"),
         ("Record Basic", "[R,2,20]"),
         ("Record Power", "[R,3,50]"),
         ("Record RPY", "[R,4,50]"),
         ("Record Thrust", "[R,5,50]"),
     ],
-    "Thrust - Triton": [
-        ("Connect", "!TRITON"),
-        ("Setup", "[M,280,900]"),
-        ("Disable", "[H]"),
+    # Division for experiment blocks
+    "Direct Thrust": [
         ("40% Forward", "[eC,320,0,320,0]"),
+        ("45% Forward", "[eC,360,0,360,0]"),
         ("50% Forward", "[eC,400,0,400,0]"),
+        ("55% Forward", "[eC,440,0,440,0]"),
         ("60% Forward", "[eC,480,0,480,0]"),
+        ("65% Forward", "[eC,520,0,520,0]"),
         ("70% Forward", "[eC,560,0,560,0]"),
+        ("70% Forward", "[eC,600,0,600,0]"),
         ("80% Forward", "[eC,640,0,640,0]"),
+        ("85% Forward", "[eC,680,0,680,0]"),
         ("90% Forward", "[eC,720,0,720,0]"),
-        ("100% Forward", "[eC,800,0,800,0]"),
+        ("95% Forward", "[eC,760,0,760,0]"),
+        ("100% Forward","[eC,800,0,800,0]"),
+        ("40% Reverse", "[eC,0,320,0,320]"),
+        ("45% Reverse", "[eC,0,360,0,360]"),
+        ("50% Reverse", "[eC,0,400,0,400]"),
+        ("55% Reverse", "[eC,0,440,0,440]"),
+        ("60% Reverse", "[eC,0,480,0,480]"),
+        ("65% Reverse", "[eC,0,520,0,520]"),
+        ("70% Reverse", "[eC,0,560,0,560]"),
+        ("70% Reverse", "[eC,0,600,0,600]"),
+        ("80% Reverse", "[eC,0,640,0,640]"),
+        ("85% Reverse", "[eC,0,680,0,680]"),
+        ("90% Reverse", "[eC,0,720,0,720]"),
+        ("95% Reverse", "[eC,0,760,0,760]"),
+        ("100% Reverse","[eC,0,800,0,800]"),
     ],
-    # "Thrust - Neptune": [
-    #     ("Connect", "!NEPTUNE"),
-    #     ("Setup", "[M,280,900]"),
-    #     ("Disable", "[H]"),
-    #     ("40% Forward", "[eC,320,0,320,0]"),
-    #     ("50% Forward", "[eC,400,0,400,0]"),
-    #     ("60% Forward", "[eC,480,0,480,0]"),
-    #     ("70% Forward", "[eC,560,0,560,0]"),
-    #     ("80% Forward", "[eC,640,0,640,0]"),
-    #     ("90% Forward", "[eC,720,0,720,0]"),
-    #     ("100% Forward", "[eC,800,0,800,0]"),
-    # ],
-    "Misc Experiments": [
-        ("Wiggle Setup", "[U,1000,1000,100,100,500]\n[F,0,800,0,0,0]"),
-        ("Wiggle Surface", "[A,6,2,1000,1,90,500,0]"),
-        ("Wiggle Depth", "[A,6,2,1000,1,90,500,10]"),
-        ("Square", "[A,7,90,5,600,0"),
-        ("STOP", "[A,0]\n[C,0,0,0]\n[H]"),
+    "Tail": [
+        ("Increase Torque", "[U,1000,1000,100,100,1000]"),
+        ("Decrease Torque", "[U,1000,1000,100,100,500]"),
+        ("Wiggle", "[A,6,2,1000,1,0,0,0]"),
+        ("Wiggle Fwd S", "[A,6,2,1000,1,0,500,0]"),
+        ("Wiggle Dive", "[A,6,2,1000,1,0,0,10]"),
+        ("Wiggle Fwd D", "[A,6,2,1000,1,0,500,10]"),
+        ("Square", "[A,7,90,5,600,0]"),
+        ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
+        ("Record Power", "[R,3,50]\n[N,Begin Tail Experiment]"),
+        ("Stop Record", "[R,0,1]\n[N,End Tail Experiment]"),
+    ],
+    "Chains": [
+        ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
+        ("Disable All", "!NEPTUNE#[H]#!POSEIDON#[H]#!TRITON#[H]#!NAUTILUS#[H]#!OCEANUS#[H]"),
+        ("Set Yaw", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
+        ("Forward","!NEPTUNE#[C,800,0,0]#!POSEIDON#[C,800,0,0]#!TRITON#[C,800,0,0]#!NAUTILUS#[C,800,0,0]#!OCEANUS#[C,800,0,0]"),
+    ],
+
+      # float alpha         = program_params[1];
+      # float yaw_track_des = program_params[2];
+      # float yaw_track_kp  = program_params[3];
+      # float yaw_track_kd  = program_params[4];
+      # float fwd_track_des = program_params[5];
+      # float fwd_track_kp  = program_params[6];
+      # float fwd_track_kd  = program_params[7];
+      # float fwd_ff        = program_params[8];
+      # float desired_depth = program_params[9];
+
+    "Track Color": [
+        ("Hit Red", "[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]"),
+        ("Capture Image", "[O,1,1]"),
     ]
 }
 
-for col, (group_name, items) in enumerate(button_groups.items()):
+# Which groups become selectable modes:
+MODE_GROUPS = ["Chains", "Direct Thrust", "Tail"]
+
+right_side_started = False
+current_col = 0  # track which column we're placing into on row=0
+
+def _place_two_per_row_buttons(parent, items):
+    for i, (label, cmd_code) in enumerate(items):
+        r, c = divmod(i, 2)
+        btn = ttk.Button(parent, text=label, command=lambda c=cmd_code: send_command(c))
+        btn.grid(row=r, column=c, padx=2, pady=2, sticky="ew")
+
+# 1) Place all groups up through and including "Data & Recording"
+for group_name, items in button_groups.items():
+    if group_name in MODE_GROUPS:
+        # Skip placing these now; they'll live inside the mode pane
+        continue
+
     lf = ttk.LabelFrame(button_frame, text=group_name)
-    lf.grid(row=0, column=col, padx=5, pady=2, sticky="n")
+    lf.grid(row=0, column=current_col, padx=5, pady=2, sticky="n")
 
     if group_name == "Connection":
         names = [label for (label, _cmd) in items]
@@ -505,17 +551,96 @@ for col, (group_name, items) in enumerate(button_groups.items()):
         combo.grid(row=0, column=0, padx=2, pady=2, sticky="ew", columnspan=2)
         if names:
             conn_var.set(names[0]); combo.current(0)
+
         def on_select(_evt=None):
             target = combo.get()
             cmd = f"!{target}"
-            print("Connecting with command:", cmd)
+            # print("Connecting with command:", cmd)
             send_command(cmd)
+
         combo.bind("<<ComboboxSelected>>", on_select)
-        continue
+
+    elif group_name == "Power":
+        # Stack vertically: Enable above Disable
+        for i, (label, cmd_code) in enumerate(items):
+            btn = ttk.Button(lf, text=label, command=lambda c=cmd_code: send_command(c))
+            btn.grid(row=i, column=0, padx=2, pady=2, sticky="ew")
+
+    else:
+        # Default: two per row
+        _place_two_per_row_buttons(lf, items)
+
+    current_col += 1
+    if group_name == "Data & Recording":
+        right_side_started = True
+        break  # stop after Data & Recording; everything else goes in the mode pane
+
+# 2) Build the mode pane in the next column to the right
+modes_lf = ttk.LabelFrame(button_frame, text="Experimental")
+modes_lf.grid(row=0, column=current_col, padx=5, pady=2, sticky="n")
+
+# Stack container that can raise one frame at a time
+stack = ttk.Frame(modes_lf)
+stack.grid(row=0, column=0, sticky="nsew")
+
+# --- Frames ---
+mode_select_frame = ttk.Frame(stack)
+mode_select_frame.grid(row=0, column=0, sticky="nsew")
+
+mode_frames = {}  # name -> frame
+for mode_name in MODE_GROUPS:
+    f = ttk.Frame(stack)
+    f.grid(row=0, column=0, sticky="nsew")
+    mode_frames[mode_name] = f
+
+# Helper to switch views
+def show_mode(name):
+    if name == "__select__":
+        mode_select_frame.tkraise()
+    else:
+        mode_frames[name].tkraise()
+
+# ---------------------------------------------------------------------
+# MODE SELECT VIEW: row-first, 6 per row (no title text)
+# ---------------------------------------------------------------------
+MAX_PER_ROW = 8
+
+for i, mode_name in enumerate(MODE_GROUPS):
+    r = i // MAX_PER_ROW
+    c = i % MAX_PER_ROW
+    btn = ttk.Button(mode_select_frame, text=mode_name,
+                     command=lambda n=mode_name: show_mode(n))
+    btn.grid(row=r, column=c, padx=2, pady=2, sticky="ew")
+
+for c in range(MAX_PER_ROW):
+    mode_select_frame.columnconfigure(c, weight=1)
+
+# ---------------------------------------------------------------------
+# INDIVIDUAL MODE FRAMES: row-first, 6 per row
+# ---------------------------------------------------------------------
+for mode_name in MODE_GROUPS:
+    items = button_groups.get(mode_name, [])
+
+    back_btn = ttk.Button(mode_frames[mode_name], text="⟵ Back to Experiments",
+                          command=lambda: show_mode("__select__"))
+    back_btn.grid(row=0, column=0, columnspan=MAX_PER_ROW,
+                  padx=2, pady=(2, 6), sticky="ew")
+
+    for c in range(MAX_PER_ROW):
+        mode_frames[mode_name].columnconfigure(c, weight=1)
 
     for i, (label, cmd_code) in enumerate(items):
-        btn = ttk.Button(lf, text=label, command=lambda c=cmd_code: send_command(c))
-        btn.grid(row=i//2, column=i%2, padx=2, pady=2, sticky="ew")
+        r = 1 + (i // MAX_PER_ROW)
+        c = i % MAX_PER_ROW
+        btn = ttk.Button(mode_frames[mode_name], text=label,
+                         command=lambda c=cmd_code: send_command(c))
+        btn.grid(row=r, column=c, padx=2, pady=2, sticky="ew")
+
+# Start on the selector
+show_mode("__select__")
+
+
+
 
 def button_command(cmd_code):
     send_command(cmd_code)
