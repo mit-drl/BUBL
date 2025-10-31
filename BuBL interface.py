@@ -80,7 +80,7 @@ gs = gridspec.GridSpec(
     hspace=0.25, wspace=0.25,
     height_ratios=[3, 1, 1, 1]
 )
-gs.update(left=0.1, right=0.99, top=0.96, bottom=0.22, wspace=0.17, hspace=0.20)
+gs.update(left=0.05, right=0.95, top=0.96, bottom=0.22, wspace=0.17, hspace=0.20)
 
 # Row 0 (top): LiDARs; col 1 intentionally EMPTY; image sits at col 3
 ax_lidar_left  = fig.add_subplot(gs[0, 0])
@@ -111,7 +111,7 @@ txt_lidar_right_dist = ax_lidar_right.text(0.98, -0.03, "", transform=ax_lidar_r
                                            ha='center', va='top', fontsize=8)
 
 # Colorbar for LiDARs
-cbar_ax = fig.add_axes([0.765, 0.65, 0.01, 0.30])
+cbar_ax = fig.add_axes([0.72, 0.65, 0.01, 0.30])
 cbar = fig.colorbar(img_left, cax=cbar_ax)
 
 # Load interface_image (same directory as script), keep aspect equal
@@ -215,7 +215,7 @@ history_autonomous_yaw   = []
 # -----------------------
 root = tk.Tk()
 root.title("BuBL Command Interface")
-root.geometry("1200x800")
+root.geometry("1550x1000")
 
 root.rowconfigure(0, weight=1)
 root.rowconfigure(1, weight=0)
@@ -299,7 +299,7 @@ ax_yaw.set_ylim(-200, 200)
 ax_voltage.set_ylim(0, 5)
 ax_current.set_ylim(0, 3)
 ax_temperature.set_ylim(10, 35)
-ax_audio.set_ylim(0, 100)
+ax_audio.set_ylim(0, 110)
 for a in (ax_fwd, ax_depth, ax_roll, ax_pitch, ax_yaw, ax_voltage, ax_current, ax_temperature, ax_audio):
     a.set_xlim(0, history_length)
 
@@ -436,7 +436,7 @@ button_groups = {
         ("LiDAR Cal", "[V]"),
     ],
     "Controller": [
-        ("Quick Setup", "[H]\n[U,1000,1000,100,100,500]\n[F,0,800,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[W,200,200,200,200]\n[M,280,900]\n[Y,0]"),
+        ("Quick Setup", "[H]\n[U,1000,1000,100,100,500]\n[F,0,800,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[W,200,200,200,200]\n[M,280,900]"),
         ("Set Yaw", "[Y,0]"),
         ("Set PID Depth", "[Pn,1,20,1,5]"),
         ("Zero PID Depth", "[Pn,1,0,0,0]"),
@@ -489,6 +489,7 @@ button_groups = {
         ("100% Reverse","[eC,0,800,0,800]"),
     ],
     "Tail": [
+        ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
         ("Increase Torque", "[U,1000,1000,100,100,1000]"),
         ("Decrease Torque", "[U,1000,1000,100,100,500]"),
         ("Wiggle", "[A,6,2,1000,1,0,0,0]"),
@@ -496,15 +497,30 @@ button_groups = {
         ("Wiggle Dive", "[A,6,2,1000,1,0,0,10]"),
         ("Wiggle Fwd D", "[A,6,2,1000,1,0,500,10]"),
         ("Square", "[A,7,90,5,600,0]"),
-        ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
         ("Record Power", "[R,3,50]\n[N,Begin Tail Experiment]"),
         ("Stop Record", "[R,0,1]\n[N,End Tail Experiment]"),
+
     ],
     "Chains": [
         ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
         ("Disable All", "!NEPTUNE#[H]#!POSEIDON#[H]#!TRITON#[H]#!NAUTILUS#[H]#!OCEANUS#[H]"),
-        ("Set Yaw", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
-        ("Forward","!NEPTUNE#[C,800,0,0]#!POSEIDON#[C,800,0,0]#!TRITON#[C,800,0,0]#!NAUTILUS#[C,800,0,0]#!OCEANUS#[C,800,0,0]"),
+        ("Stop Record All","!NEPTUNE#[R,0,1]#!POSEIDON#[R,0,1]#!TRITON#[R,0,1]#!NAUTILUS#[R,0,1]#!OCEANUS#[R,0,1]"),
+        ("Record All","!NEPTUNE#[R,3,50]#!POSEIDON#[R,3,50]#!TRITON#[R,3,50]#!NAUTILUS#[R,3,50]#!OCEANUS#[R,3,50]"),
+        ("Note One Start", "[N,O Start]"),
+        ("Note One Stop", "[N,O Stop]"),
+        ("Note Two Start", "[N,OO Start]"),
+        ("Note Two Stop", "[N,OO Stop]"),
+        ("Note Three Start", "[N,OOO Start]"),
+        ("Note Three Stop", "[N,OOO Stop]"),
+        ("Note Four Start", "[N,OOOO Start]"),
+        ("Note Four Stop", "[N,OOOO Stop]"),
+        ("Note Five Start", "[N,OOOOO Start]"),
+        ("Note Five Stop", "[N,OOOOO Stop]"),
+        ("Set Yaw All", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
+        ("All [C,800,0,0]","!NEPTUNE#[C,800,0,0]#!POSEIDON#[C,800,0,0]#!TRITON#[C,800,0,0]#!NAUTILUS#[C,800,0,0]#!OCEANUS#[C,800,0,0]"),
+        ("All [C,400,0,0]","!NEPTUNE#[C,400,0,0]#!POSEIDON#[C,400,0,0]#!TRITON#[C,400,0,0]#!NAUTILUS#[C,400,0,0]#!OCEANUS#[C,400,0,0]"),
+        ("All [C,800,20,0]","!NEPTUNE#[C,800,20,0]#!POSEIDON#[C,800,20,0]#!TRITON#[C,800,20,0]#!NAUTILUS#[C,800,20,0]#!OCEANUS#[C,800,20,0]"),
+        ("All [C,400,20,0]","!NEPTUNE#[C,400,20,0]#!POSEIDON#[C,400,20,0]#!TRITON#[C,400,20,0]#!NAUTILUS#[C,400,20,0]#!OCEANUS#[C,400,20,0]"),
     ],
 
       # float alpha         = program_params[1];
@@ -517,14 +533,39 @@ button_groups = {
       # float fwd_ff        = program_params[8];
       # float desired_depth = program_params[9];
 
-    "Track Color": [
-        ("Hit Red", "[A,5,0.5,80,-0.4,-0.05,1000,0,0,0,0]"),
+    "Vision": [
+        ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
+        ("Hit Red", "[A,5,0.5,80,-0.4,-0.05,0,0,0,300,10,1]"),
+        ("Hit Green", "[A,5,0.5,80,-0.4,-0.05,0,0,0,300,10,2]"),
+        ("Hit Yellow", "[A,5,0.5,80,-0.4,-0.05,0,0,0,300,10,4]"),
         ("Capture Image", "[O,1,1]"),
+    ],
+
+    "Controllers": [
+        ("Base PID", "[Pn,1,20,1,5]#[Pn,2,0,0,2]#[Pn,3,0,0,2]#[Pn,4,4,1,2]"),
+        ("High PD", "[Pn,1,20,0,5]#[Pn,2,0,0,4]#[Pn,3,0,0,4]#[Pn,4,20,0,10]"),
+        ("Thrust - all", "[T,1,1,1,1]"),
+        ("Thrust - vary", "[T,0,0,0,0]"),
+        ("Thrust - rear", "[T,1,-1,1,-1]"),
+        ("Thrust - front", "[T,-1,1,-1,1]"),
+        ("FF 400", "[F,0,400,0,0,0]"),
+        ("FF 600", "[F,0,600,0,0,0]"),
+        ("FF 800", "[F,0,800,0,0,0]"),
+    ],
+
+    "Shapes": [
+        ("- Small", "[A,1,180,5,500,0]"),
+        ("- Large", "[A,1,180,10,800,0]"),
+        ("△ Small", "[A,1,120,5,500,0]"),
+        ("△ Large", "[A,1,120,10,800,0]"),
+        ("□ Small", "[A,1,90,5,500,0]"),
+        ("□ Large", "[A,1,90,10,800,0]"),
+        ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ]
 }
 
 # Which groups become selectable modes:
-MODE_GROUPS = ["Chains", "Direct Thrust", "Tail"]
+MODE_GROUPS = ["Vision", "Chains", "Direct Thrust", "Tail", "Controllers", "Shapes"]
 
 right_side_started = False
 current_col = 0  # track which column we're placing into on row=0
@@ -576,7 +617,7 @@ for group_name, items in button_groups.items():
         break  # stop after Data & Recording; everything else goes in the mode pane
 
 # 2) Build the mode pane in the next column to the right
-modes_lf = ttk.LabelFrame(button_frame, text="Experimental")
+modes_lf = ttk.LabelFrame(button_frame, text="Select")
 modes_lf.grid(row=0, column=current_col, padx=5, pady=2, sticky="n")
 
 # Stack container that can raise one frame at a time
@@ -621,7 +662,7 @@ for c in range(MAX_PER_ROW):
 for mode_name in MODE_GROUPS:
     items = button_groups.get(mode_name, [])
 
-    back_btn = ttk.Button(mode_frames[mode_name], text="⟵ Back to Experiments",
+    back_btn = ttk.Button(mode_frames[mode_name], text="⟵ Back",
                           command=lambda: show_mode("__select__"))
     back_btn.grid(row=0, column=0, columnspan=MAX_PER_ROW,
                   padx=2, pady=(2, 6), sticky="ew")
