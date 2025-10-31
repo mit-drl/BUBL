@@ -499,7 +499,6 @@ button_groups = {
         ("Square", "[A,7,90,5,600,0]"),
         ("Record Power", "[R,3,50]\n[N,Begin Tail Experiment]"),
         ("Stop Record", "[R,0,1]\n[N,End Tail Experiment]"),
-
     ],
     "Chains": [
         ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
