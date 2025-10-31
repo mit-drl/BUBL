@@ -25,7 +25,7 @@ mpl.rcParams.update({
 # -----------------------
 try:
     # change for correct serial port
-    ser = serial.Serial('COM7', 921600, timeout=0.1)
+    ser = serial.Serial('COM4', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     sys.exit(1)
