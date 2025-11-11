@@ -25,7 +25,7 @@ mpl.rcParams.update({
 # -----------------------
 try:
     # change for correct serial port
-    ser = serial.Serial('COM4', 921600, timeout=0.1)
+    ser = serial.Serial('COM7', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     sys.exit(1)
@@ -74,7 +74,7 @@ threading.Thread(target=serial_reader, daemon=True).start()
 # Figure & Layout
 # -----------------------
 fig = plt.figure(figsize=(16, 20))
-# 4 rows, 4 cols. Row 0 tall for LiDARs; rows 1–2 for sensors; row 3 for power/audio
+# 4 rows, 4 cols. Row 0 tall for LiDARs; rows 1–2 for sensors; row 3 for power/audio/etc
 gs = gridspec.GridSpec(
     4, 4, figure=fig,
     hspace=0.25, wspace=0.25,
@@ -144,33 +144,39 @@ def _load_interface_image():
         return False
 _load_interface_image()
 
-# Row 1: Thrust (fwd), Depth, Yaw, Motors (span into bottom row)
-ax_fwd   = fig.add_subplot(gs[1, 0])
+# -----------------------
+# Axes (Rows 1–3) per your new layout
+# -----------------------
+# Row 1: (col0) Thrust (time-series), (col1) Depth, (col2) Yaw; (col3) Motors spans rows 1–2
+ax_fwd   = fig.add_subplot(gs[1, 0])         # stays put
 ax_depth = fig.add_subplot(gs[1, 1])
 ax_yaw   = fig.add_subplot(gs[1, 2])
-ax_thrust = fig.add_subplot(gs[1:, 3])   # spans rows 1–3 (taller)
+ax_thrust = fig.add_subplot(gs[1:3, 3])      # NOW 2 tall: rows 1–2
 
 ax_fwd.set_title("Thrust")
 ax_depth.set_title("Depth")
 ax_yaw.set_title("Yaw")
 ax_thrust.set_title("Motors")
 
-# Row 2: Roll, Pitch, Temperature (below Yaw)
+# Row 2: Roll, Pitch, Temperature (unchanged)
 ax_roll        = fig.add_subplot(gs[2, 0])
 ax_pitch       = fig.add_subplot(gs[2, 1])
-ax_temperature = fig.add_subplot(gs[2, 2])  # directly under yaw
+ax_temperature = fig.add_subplot(gs[2, 2])
 
 ax_roll.set_title("Roll")
 ax_pitch.set_title("Pitch")
 ax_temperature.set_title("Temperature")
 
-# Row 3: Voltage, Current, Audio Level; col 3 is covered by Motors
+# Row 3: Voltage, NEW RSSI (replaces old Current spot), Audio, and Current moved to col3
 ax_voltage = fig.add_subplot(gs[3, 0])
-ax_current = fig.add_subplot(gs[3, 1])
+ax_rssi    = fig.add_subplot(gs[3, 1])       # NEW: goes where Current used to be
 ax_audio   = fig.add_subplot(gs[3, 2])
+ax_current = fig.add_subplot(gs[3, 3])       # MOVED: into the third row under Motors
+
 ax_voltage.set_title("Voltage")
-ax_current.set_title("Current")
+ax_rssi.set_title("Signal Strength")
 ax_audio.set_title("Audio Level")
+ax_current.set_title("Current")
 
 # -----------------------
 # Plot Artists
@@ -186,6 +192,7 @@ line_voltage,    = ax_voltage.plot([], [], '-', color='blue')
 line_current,    = ax_current.plot([], [], '-', color='blue')
 line_temperature,= ax_temperature.plot([], [], '-', color='blue')
 line_audio,      = ax_audio.plot([], [], '-', color='blue')
+line_rssi,       = ax_rssi.plot([], [], '-', color='blue')  # NEW
 
 bar_positions = np.arange(4)
 bar_labels    = ["T1", "T2", "T3", "T4"]
@@ -206,6 +213,7 @@ history_voltage = []
 history_current = []
 history_temperature = []
 history_audio_level = []
+history_rssi    = []  # NEW
 history_autonomous_fwd   = []
 history_autonomous_depth = []
 history_autonomous_yaw   = []
@@ -215,7 +223,7 @@ history_autonomous_yaw   = []
 # -----------------------
 root = tk.Tk()
 root.title("BuBL Command Interface")
-root.geometry("1550x1000")
+root.geometry("1300x800")
 
 root.rowconfigure(0, weight=1)
 root.rowconfigure(1, weight=0)
@@ -253,7 +261,7 @@ freeze_figure_size()
 # -----------------------
 for ax in (
     ax_fwd, ax_depth, ax_yaw, ax_roll, ax_pitch,
-    ax_temperature, ax_voltage, ax_current, ax_audio
+    ax_temperature, ax_voltage, ax_current, ax_audio, ax_rssi
 ):
     ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
     ax.set_xlabel('')
@@ -300,7 +308,8 @@ ax_voltage.set_ylim(0, 5)
 ax_current.set_ylim(0, 3)
 ax_temperature.set_ylim(10, 35)
 ax_audio.set_ylim(0, 110)
-for a in (ax_fwd, ax_depth, ax_roll, ax_pitch, ax_yaw, ax_voltage, ax_current, ax_temperature, ax_audio):
+ax_rssi.set_ylim(-150, 0)
+for a in (ax_fwd, ax_depth, ax_roll, ax_pitch, ax_yaw, ax_voltage, ax_current, ax_temperature, ax_audio, ax_rssi):
     a.set_xlim(0, history_length)
 
 # -----------------------
@@ -312,7 +321,7 @@ def make_value_text(ax):
         transform=ax.transAxes,
         ha="left", va="top",
         fontsize=8,
-        bbox= None,
+        bbox=None,
         zorder=10
     )
 
@@ -325,6 +334,7 @@ txt_voltage     = make_value_text(ax_voltage)
 txt_current     = make_value_text(ax_current)
 txt_temperature = make_value_text(ax_temperature)
 txt_audio       = make_value_text(ax_audio)
+txt_rssi        = make_value_text(ax_rssi)  # NEW
 
 def update_value_texts():
     if history_autonomous_fwd:
@@ -345,6 +355,8 @@ def update_value_texts():
         txt_temperature.set_text(f"{history_temperature[-1]:7.1f}")
     if history_audio_level:
         txt_audio.set_text(f"{history_audio_level[-1]:7.1f}")
+    if history_rssi:
+        txt_rssi.set_text(f"{history_rssi[-1]:7.1f}")
 
 # -----------------------
 # Command Entry & Buttons
@@ -679,9 +691,6 @@ for mode_name in MODE_GROUPS:
 # Start on the selector
 show_mode("__select__")
 
-
-
-
 def button_command(cmd_code):
     send_command(cmd_code)
 
@@ -699,11 +708,11 @@ fig.canvas.mpl_connect("draw_event", _on_draw)
 ANIMATED = [
     line_depth, line_autonomous_depth, line_fwd,
     line_roll, line_pitch, line_yaw, line_autonomous_yaw,
-    line_voltage, line_current, line_temperature, line_audio,
+    line_voltage, line_current, line_temperature, line_audio, line_rssi,
     img_left, img_right, centroid_left_pt, centroid_right_pt,
     txt_lidar_left_dist, txt_lidar_right_dist,
     *list(bar_container),
-    txt_fwd, txt_depth, txt_roll, txt_pitch, txt_yaw, txt_voltage, txt_current, txt_temperature, txt_audio
+    txt_fwd, txt_depth, txt_roll, txt_pitch, txt_yaw, txt_voltage, txt_current, txt_temperature, txt_audio, txt_rssi
 ]
 for a in ANIMATED:
     a.set_animated(True)
@@ -748,8 +757,8 @@ def update_plot():
             continue
 
         tokens = line[5:].strip().replace(",", " ").split()
-        # Expecting 53 tokens total (ADDED audio_level after temperature)
-        if len(tokens) != 53:
+        # Expecting 54 tokens total now (ADDED final: filtered RSSI)
+        if len(tokens) != 54:
             continue
 
         try:
@@ -772,6 +781,7 @@ def update_plot():
             centroid_right_row  = float(tokens[50])
             centroid_right_col  = float(tokens[51])
             distance_right      = float(tokens[52])
+            rssi_filtered       = float(tokens[53])  # NEW (final token)
         except ValueError:
             continue
 
@@ -798,6 +808,7 @@ def update_plot():
         history_current.append(current_val)
         history_temperature.append(temperature_val)
         history_audio_level.append(audio_level)
+        history_rssi.append(rssi_filtered)  # NEW
         history_autonomous_fwd.append(autonomous_fwd)
         history_autonomous_depth.append(autonomous_depth)
         history_autonomous_yaw.append(autonomous_yaw)
@@ -806,6 +817,7 @@ def update_plot():
         if len(history_depth) > history_length:
             history_depth.pop(0); history_roll.pop(0); history_pitch.pop(0); history_yaw.pop(0)
             history_voltage.pop(0); history_current.pop(0); history_temperature.pop(0); history_audio_level.pop(0)
+            history_rssi.pop(0)
             history_autonomous_fwd.pop(0); history_autonomous_depth.pop(0); history_autonomous_yaw.pop(0)
 
         # Set data
@@ -820,6 +832,7 @@ def update_plot():
         line_current.set_data(range(len(history_current)), history_current)
         line_temperature.set_data(range(len(history_temperature)), history_temperature)
         line_audio.set_data(range(len(history_audio_level)), history_audio_level)
+        line_rssi.set_data(range(len(history_rssi)), history_rssi)  # NEW
 
         # Overlays
         update_value_texts()
