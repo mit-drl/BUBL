@@ -25,7 +25,7 @@ mpl.rcParams.update({
 # -----------------------
 try:
     # change for correct serial port
-    ser = serial.Serial('COM7', 921600, timeout=0.1)
+    ser = serial.Serial('COM14', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     sys.exit(1)
@@ -534,6 +534,26 @@ button_groups = {
         ("All [C,400,20,0]","!NEPTUNE#[C,400,20,0]#!POSEIDON#[C,400,20,0]#!TRITON#[C,400,20,0]#!NAUTILUS#[C,400,20,0]#!OCEANUS#[C,400,20,0]"),
     ],
 
+    "Disassembly": [
+        ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
+        ("Disable All", "!NEPTUNE#[H]#!POSEIDON#[H]#!TRITON#[H]#!NAUTILUS#[H]#!OCEANUS#[H]"),
+        ("Set Yaw All", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
+        ("All [C,400,0,0]","!NEPTUNE#[C,400,0,0]#!POSEIDON#[C,400,0,0]#!TRITON#[C,400,0,0]#!NAUTILUS#[C,400,0,0]#!OCEANUS#[C,400,0,0]"),
+        ("Disassemble","!NEPTUNE#[C,-200,0,-1000]#!POSEIDON#[C,-200,0,1000]#!TRITON#[C,-200,0,-1000]#!NAUTILUS#[C,-200,0,1000]#!OCEANUS#[C,-200,0,-1000]"),
+    ],
+
+    "Chain Control": [
+        ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
+        ("Disable All", "!NEPTUNE#[H]#!POSEIDON#[H]#!TRITON#[H]#!NAUTILUS#[H]#!OCEANUS#[H]"),
+        ("Set Yaw All", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
+        ("All [C,400,0,0]","!NEPTUNE#[C,400,0,0]#!POSEIDON#[C,400,0,0]#!TRITON#[C,400,0,0]#!NAUTILUS#[C,400,0,0]#!OCEANUS#[C,400,0,0]"),
+        ("All LEFT","!NEPTUNE#[eC,400,0,0,0]#!POSEIDON#[eC,400,0,0,0]#!TRITON#[eC,400,0,0,0]#!NAUTILUS#[eC,400,0,0,0]#!OCEANUS#[eC,400,0,0,0]"),
+        ("All RIGHT","!NEPTUNE#[eC,0,0,400,0]#!POSEIDON#[eC,0,0,400,0]#!TRITON#[eC,0,0,400,0]#!NAUTILUS#[eC,0,0,400,0]#!OCEANUS#[eC,0,0,400,0]"),
+        ("CW","!NEPTUNE#[eC,0,400,400,0]#!POSEIDON#[eC,0,400,400,0]#!TRITON#[eC,0,0,0,0]#!NAUTILUS#[eC,400,0,0,400]#!OCEANUS#[eC,400,0,0,400]"),
+        ("CCW","!NEPTUNE#[eC,400,0,0,400]#!POSEIDON#[eC,400,0,0,400]#!TRITON#[eC,0,0,0,0]#!NAUTILUS#[eC,0,400,400,0]#!OCEANUS#[eC,0,400,400,0]"),
+        ("All LEFT HIGH","!NEPTUNE#[eC,600,0,0,0]#!POSEIDON#[eC,600,0,0,0]#!TRITON#[eC,600,0,0,0]#!NAUTILUS#[eC,600,0,0,0]#!OCEANUS#[eC,600,0,0,0]"),
+    ],
+
       # float alpha         = program_params[1];
       # float yaw_track_des = program_params[2];
       # float yaw_track_kp  = program_params[3];
@@ -576,7 +596,7 @@ button_groups = {
 }
 
 # Which groups become selectable modes:
-MODE_GROUPS = ["Vision", "Chains", "Direct Thrust", "Tail", "Controllers", "Shapes"]
+MODE_GROUPS = ["Vision", "Chains", "Dissasembly", "Chain Control", "Direct Thrust", "Tail", "Controllers", "Shapes"]
 
 right_side_started = False
 current_col = 0  # track which column we're placing into on row=0
