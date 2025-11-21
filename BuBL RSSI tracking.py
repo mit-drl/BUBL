@@ -20,6 +20,10 @@ mpl.rcParams.update({
     "lines.linewidth": 0.8,
 })
 
+# Autonomous hysteresis state
+last_autonomy_time = 0.0
+autonomy_cooldown_s = 2.0   # seconds to ignore new turns
+
 # -----------------------
 # Serial Port
 # -----------------------
@@ -31,6 +35,7 @@ except Exception as e:
     sys.exit(1)
 
 serial_queue = queue.Queue()
+
 
 # -----------------------
 # Serial Reader Thread
@@ -805,7 +810,7 @@ _next_deadline  = time.perf_counter()
 _last_wh = [canvas_widget.winfo_width(), canvas_widget.winfo_height()]
 
 def update_plot():
-    global _next_deadline
+    global _next_deadline, last_autonomy_time
     updated = False
 
     MAX_DRAIN = 250
@@ -905,6 +910,22 @@ def update_plot():
             b.set_height(thrusts[i])
 
         updated = True
+
+        # autonomous tracking logic with hysteresis
+        now = time.perf_counter()
+
+        if len(history_rssi) >= 10:
+            recent = np.mean(history_rssi[-5:])
+            previous = np.mean(history_rssi[-10:-5])
+            rssi_gradient = recent - previous
+
+            # Only act if NOT in cooldown
+            if now - last_autonomy_time > autonomy_cooldown_s:
+                if rssi_gradient < -2.0:
+                    send_command("[dC,200,0,180]")
+                    # print("AUTONOMY: sent command")
+                    last_autonomy_time = now  # start cooldown
+
 
     now = time.perf_counter()
     if updated and now >= _next_deadline:
