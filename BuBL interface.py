@@ -457,6 +457,9 @@ button_groups = {
         ("TRITON", "!TRITON"),
         ("NAUTILUS", "!NAUTILUS"),
         ("OCEANUS", "!OCEANUS"),
+        ("CETUS", "!CETUS"),
+        ("LEVIATHAN", "!LEVIATHAN"),
+        ("KRAKEN", "!KRAKEN"),
     ],
     "Power": [
         ("Enable", "[E]"),
@@ -497,7 +500,7 @@ button_groups = {
         ("Record Thrust", "[R,5,50]"),
     ],
     # Division for experiment blocks
-    "Direct Fwd Thrust": [
+    "Direct Fwd": [
         ("40% Forward", "[eC,320,0,320,0]"),
         ("45% Forward", "[eC,360,0,360,0]"),
         ("50% Forward", "[eC,400,0,400,0]"),
@@ -512,7 +515,7 @@ button_groups = {
         ("95% Forward", "[eC,760,0,760,0]"),
         ("100% Forward","[eC,800,0,800,0]"),
     ],
-    "Direct Rev Thrust": [
+    "Direct Rev": [
         ("40% Reverse", "[eC,0,320,0,320]"),
         ("45% Reverse", "[eC,0,360,0,360]"),
         ("50% Reverse", "[eC,0,400,0,400]"),
@@ -619,7 +622,7 @@ for label, _cmd in button_groups["Connection"]:
     multi_target_vars[label] = tk.BooleanVar(master=root, value=False)
 
 # Which groups become selectable modes:
-MODE_GROUPS = ["Vision", "Chains", "Dissasembly", "Chain Control", "Direct Fwd Thrust", "Direct Rev Thrust", "Tail", "Controllers", "Shapes"]
+MODE_GROUPS = ["Vision", "Chains", "Disassembly", "Chain Control", "Direct Fwd", "Direct Rev", "Tail", "Controllers", "Shapes"]
 
 right_side_started = False
 current_col = 0  # track which column we're placing into on row=0
@@ -717,7 +720,7 @@ def show_mode(name):
 # ---------------------------------------------------------------------
 # MODE SELECT VIEW: row-first, 6 per row (no title text)
 # ---------------------------------------------------------------------
-MAX_PER_ROW = 5
+MAX_PER_ROW = 4
 
 for i, mode_name in enumerate(MODE_GROUPS):
     r = i // MAX_PER_ROW
