@@ -25,7 +25,7 @@ mpl.rcParams.update({
 # -----------------------
 try:
     # change for correct serial port
-    ser = serial.Serial('COM14', 921600, timeout=0.1)
+    ser = serial.Serial('COM7', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     sys.exit(1)
@@ -500,6 +500,10 @@ button_groups = {
         ("Record Thrust", "[R,5,50]"),
     ],
     # Division for experiment blocks
+    "LiDAR": [
+        ("Wonder", "[A,3,200,1,100,1,200,0]"),
+        ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
+    ],
     "Direct Fwd": [
         ("40% Forward", "[eC,320,0,320,0]"),
         ("45% Forward", "[eC,360,0,360,0]"),
@@ -530,7 +534,7 @@ button_groups = {
         ("95% Reverse", "[eC,0,760,0,760]"),
         ("100% Reverse","[eC,0,800,0,800]"),
     ],
-"Tail": [
+    "Tail": [
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
         ("Increase Torque", "[U,1000,1000,100,100,1000]"),
         ("Decrease Torque", "[U,1000,1000,100,100,500]"),
@@ -622,7 +626,7 @@ for label, _cmd in button_groups["Connection"]:
     multi_target_vars[label] = tk.BooleanVar(master=root, value=False)
 
 # Which groups become selectable modes:
-MODE_GROUPS = ["Vision", "Chains", "Disassembly", "Chain Control", "Direct Fwd", "Direct Rev", "Tail", "Controllers", "Shapes"]
+MODE_GROUPS = ["LiDAR", "Vision", "Chains", "Disassembly", "Chain Control", "Direct Fwd", "Direct Rev", "Tail", "Controllers", "Shapes"]
 
 right_side_started = False
 current_col = 0  # track which column we're placing into on row=0
