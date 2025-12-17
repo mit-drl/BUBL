@@ -25,7 +25,7 @@ mpl.rcParams.update({
 # -----------------------
 try:
     # change for correct serial port
-    ser = serial.Serial('COM7', 921600, timeout=0.1)
+    ser = serial.Serial('COM15', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     sys.exit(1)
@@ -484,7 +484,7 @@ button_groups = {
         ("Zero PID Roll", "[Pn,2,0,0,0]"),
         ("Set PID Pitch", "[Pn,3,0,0,2]"),
         ("Zero PID Pitch", "[Pn,3,0,0,0]"),
-        ("Set PID Yaw", "[Pn,4,4,1,2]"),
+        ("Set PID Yaw", "[Pn,4,4,0,2]"),
         ("Zero PID Yaw", "[Pn,4,0,0,0]"),
     ],
     "Data & Recording": [
@@ -499,10 +499,18 @@ button_groups = {
         ("Record RPY", "[R,4,50]"),
         ("Record Thrust", "[R,5,50]"),
     ],
-    # Division for experiment blocks
-    # test
+    # A
+    # 3
+    # distance_threshold
+    # k_base
+    # distance_exp
+    # position_exp
+    # torque_scale
+    # linear_scale
+    # desired_thrust
+    # desired_depth
     "LiDAR": [
-        ("Wonder", "[A,3,200,1,100,1,200,0]"),
+        ("Wonder", "[A,3,400,0.8,1.0,2.0,500,100,200,0]"),
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ],
     "Direct Fwd": [
@@ -868,6 +876,8 @@ def update_plot():
         txt_lidar_right_dist.set_text(f"{int(distance_right)}")
         centroid_left_pt.set_visible(distance_left < 250)
         centroid_right_pt.set_visible(distance_right < 250)
+
+        # print(centroid_left_col, centroid_right_col)
 
         # Append histories
         history_depth.append(depth_val)
