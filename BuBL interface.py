@@ -490,14 +490,16 @@ button_groups = {
     "Data & Recording": [
         ("Stream", "[B,1]"),
         ("Stop Stream", "[B,0]"),
+        ("Collect Data", "[Q,1]"),
+        ("Stop Collect", "[Q,0]"),
         ("Capture Image", "[O,1,1]"),
         ("Capture Audio", "[I,3]"),
-        ("Record All", "[R,1,10]"),
+        ("Record All", "[R,1,20]"),
         ("Stop Recording", "[R,0,1]"),
         ("Record Basic", "[R,2,20]"),
         ("Record Power", "[R,3,50]"),
-        ("Record RPY", "[R,4,50]"),
-        ("Record Thrust", "[R,5,50]"),
+        # ("Record RPY", "[R,4,50]"),
+        # ("Record Thrust", "[R,5,50]"),
     ],
     # A
     # 3
@@ -510,7 +512,8 @@ button_groups = {
     # desired_thrust
     # desired_depth
     "LiDAR": [
-        ("Wonder", "[A,3,400,0.8,1.0,2.0,500,100,200,0]"),
+        ("Wonder Slow", "[A,3,400,0.8,1.0,2.0,200,100,200,0]"),
+        ("Wonder Fast", "[A,3,500,1.0,1.0,2.0,200,800,800,0]"),
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ],
     "Direct Fwd": [
