@@ -25,7 +25,7 @@ mpl.rcParams.update({
 # -----------------------
 try:
     # change for correct serial port
-    ser = serial.Serial('COM15', 921600, timeout=0.1)
+    ser = serial.Serial('COM7', 921600, timeout=0.1)
 except Exception as e:
     print("Error opening serial port:", e)
     sys.exit(1)
@@ -93,8 +93,8 @@ Z_left = np.zeros((4, 4))
 Z_right = np.zeros((4, 4))
 img_left  = ax_lidar_left.imshow(Z_left,  cmap='plasma', origin='lower', vmin=vmin, vmax=vmax)
 img_right = ax_lidar_right.imshow(Z_right, cmap='plasma', origin='lower', vmin=vmin, vmax=vmax)
-ax_lidar_left.set_title("Left LiDAR Scan", fontsize=12)
-ax_lidar_right.set_title("Right LiDAR Scan", fontsize=12)
+ax_lidar_left.set_title("Left LiDAR Scan", fontsize=9)
+ax_lidar_right.set_title("Right LiDAR Scan", fontsize=9)
 for ax in (ax_lidar_left, ax_lidar_right):
     ax.set_xticks([]); ax.set_yticks([])
 
@@ -336,6 +336,32 @@ txt_temperature = make_value_text(ax_temperature)
 txt_audio       = make_value_text(ax_audio)
 txt_rssi        = make_value_text(ax_rssi)  # NEW
 
+# --- MCU time + FC state overlay (anchored to the robot PNG axes) ---
+x0 = 0.10   # left edge anchor (move this to taste)
+y0 = -0.30  # bottom line baseline
+dy = 0.11   # vertical spacing between lines
+
+txt_fcstate = ax_cam.text(
+    x0, y0, "",
+    transform=ax_cam.transAxes,
+    ha="left", va="bottom", fontsize=9,
+    zorder=50
+)
+
+txt_mcutime = ax_cam.text(
+    x0, y0 + dy, "",
+    transform=ax_cam.transAxes,
+    ha="left", va="bottom", fontsize=9,
+    zorder=50
+)
+
+FC_STATE_MAP = {
+    0: "not connected",
+    1: "absolute",
+    2: "yaw rate",
+    3: "direct",
+}
+
 def update_value_texts():
     if history_autonomous_fwd:
         txt_fwd.set_text(f"{history_autonomous_fwd[-1]:7.1f}")
@@ -512,8 +538,8 @@ button_groups = {
     # desired_thrust
     # desired_depth
     "LiDAR": [
-        ("Wonder Slow", "[A,3,400,0.8,1.0,2.0,200,100,200,0]"),
-        ("Wonder Fast", "[A,3,500,1.0,1.0,2.0,200,800,800,0]"),
+        ("(CLEAR) Wonder Slow", "[A,3,400,1.0,1.0,2.0,400,300,200,0]"),
+        ("(CLEAR) Wonder Fast", "[A,3,400,1.0,1.0,2.0,200,800,800,0]"),
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ],
     "Direct Fwd": [
@@ -586,16 +612,6 @@ button_groups = {
         ("CW Thrust","[eC,0,400,400,0]"),
         ("CCW Thrust","[eC,400,0,0,400]"),
     ],
-
-      # float alpha         = program_params[1];
-      # float yaw_track_des = program_params[2];
-      # float yaw_track_kp  = program_params[3];
-      # float yaw_track_kd  = program_params[4];
-      # float fwd_track_des = program_params[5];
-      # float fwd_track_kp  = program_params[6];
-      # float fwd_track_kd  = program_params[7];
-      # float fwd_ff        = program_params[8];
-      # float desired_depth = program_params[9];
 
     "Vision": [
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
@@ -793,7 +809,8 @@ ANIMATED = [
     img_left, img_right, centroid_left_pt, centroid_right_pt,
     txt_lidar_left_dist, txt_lidar_right_dist,
     *list(bar_container),
-    txt_fwd, txt_depth, txt_roll, txt_pitch, txt_yaw, txt_voltage, txt_current, txt_temperature, txt_audio, txt_rssi
+    txt_fwd, txt_depth, txt_roll, txt_pitch, txt_yaw, txt_voltage, txt_current, txt_temperature, txt_audio, txt_rssi,
+    txt_mcutime, txt_fcstate,  # NEW
 ]
 for a in ANIMATED:
     a.set_animated(True)
@@ -838,8 +855,8 @@ def update_plot():
             continue
 
         tokens = line[5:].strip().replace(",", " ").split()
-        # Expecting 54 tokens total now (ADDED final: filtered RSSI)
-        if len(tokens) != 54:
+        # Expecting 56 tokens total now (added MCUtime + FC_state; RSSI_filtered final)
+        if len(tokens) != 56:
             continue
 
         try:
@@ -862,7 +879,9 @@ def update_plot():
             centroid_right_row  = float(tokens[50])
             centroid_right_col  = float(tokens[51])
             distance_right      = float(tokens[52])
-            rssi_filtered       = float(tokens[53])  # NEW (final token)
+            mcu_time_min        = float(tokens[53])   # NEW
+            fc_state_raw        = float(tokens[54])   # NEW
+            rssi_filtered       = float(tokens[55])   # MOVED (final token now)
         except ValueError:
             continue
 
@@ -879,8 +898,6 @@ def update_plot():
         txt_lidar_right_dist.set_text(f"{int(distance_right)}")
         centroid_left_pt.set_visible(distance_left < 250)
         centroid_right_pt.set_visible(distance_right < 250)
-
-        # print(centroid_left_col, centroid_right_col)
 
         # Append histories
         history_depth.append(depth_val)
@@ -919,6 +936,12 @@ def update_plot():
 
         # Overlays
         update_value_texts()
+
+        # --- NEW: update MCU time + FC state overlay ---
+        _fc_state_i = int(round(fc_state_raw))
+        _fc_state_s = FC_STATE_MAP.get(_fc_state_i, str(_fc_state_i))
+        txt_mcutime.set_text(f"Operating Time:  {int(round(mcu_time_min))} mins")
+        txt_fcstate.set_text(f"Controller Mode: {_fc_state_s}")
 
         # Thrust bars
         thrusts = [thrust_1, thrust_2, thrust_3, thrust_4]
