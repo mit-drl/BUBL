@@ -538,7 +538,7 @@ button_groups = {
     # desired_thrust
     # desired_depth
     "LiDAR": [
-        ("(CLEAR) Wonder Slow", "[A,3,400,1,1.0,1.0,2.0,400,200,300,150,2,200,0]"),
+        ("(CLEAR) Wonder Slow", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,200,0]"),
         # ("(CLEAR) Wonder Fast", "[A,3,400,1,1.0,1.0,2.0,200,800,2,800,0]"),
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ],
