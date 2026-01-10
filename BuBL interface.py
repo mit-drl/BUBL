@@ -527,18 +527,9 @@ button_groups = {
         # ("Record RPY", "[R,4,50]"),
         # ("Record Thrust", "[R,5,50]"),
     ],
-    # A
-    # 3
-    # distance_threshold
-    # k_base
-    # distance_exp
-    # position_exp
-    # torque_scale
-    # linear_scale
-    # desired_thrust
-    # desired_depth
+
     "LiDAR": [
-        ("(CLEAR) Wonder Slow", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,200,0]"),
+        ("(CLEAR) Wonder Slow", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,600,0]"),
         # ("(CLEAR) Wonder Fast", "[A,3,400,1,1.0,1.0,2.0,200,800,2,800,0]"),
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ],
@@ -602,9 +593,10 @@ button_groups = {
         ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
         ("Disable All", "!NEPTUNE#[H]#!POSEIDON#[H]#!TRITON#[H]#!NAUTILUS#[H]#!OCEANUS#[H]"),
         ("Set Yaw All", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
-        ("All [C,400,0,0]","!NEPTUNE#[C,400,0,0]#!POSEIDON#[C,400,0,0]#!TRITON#[C,400,0,0]#!NAUTILUS#[C,400,0,0]#!OCEANUS#[C,400,0,0]"),
-        ("Disassemble","!NEPTUNE#[C,-200,0,-1000]#!POSEIDON#[C,-200,0,1000]#!TRITON#[C,-200,0,-1000]#!NAUTILUS#[C,-200,0,1000]#!OCEANUS#[C,-200,0,-1000]"),
+        ("All [C,400,0,0]","!NEPTUNE#[C,400,0,0]#!POSEIDON#[C,400,0,0]#!TRITON#[C,400,0,0]#!NAUTILUS#[C,400,0,0]"),
+        ("Disassemble","!NEPTUNE#[C,-200,0,-1000]#!POSEIDON#[C,-200,0,1000]#!TRITON#[C,-200,0,-1000]#!CETUS#[C,-200,0,1000]"),
     ],
+
 
     "Chain Control": [
         ("Left Rear Thruster","[eC,400,0,0,0]"),
