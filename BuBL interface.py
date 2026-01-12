@@ -590,11 +590,9 @@ button_groups = {
     ],
 
     "Disassembly": [
-        ("Enable All", "!NEPTUNE#[E]#!POSEIDON#[E]#!TRITON#[E]#!NAUTILUS#[E]#!OCEANUS#[E]"),
-        ("Disable All", "!NEPTUNE#[H]#!POSEIDON#[H]#!TRITON#[H]#!NAUTILUS#[H]#!OCEANUS#[H]"),
-        ("Set Yaw All", "!NEPTUNE#[Y,0]#!POSEIDON#[Y,0]#!TRITON#[Y,0]#!NAUTILUS#[Y,0]#!OCEANUS#[Y,0]"),
-        ("All [C,400,0,0]","!NEPTUNE#[C,400,0,0]#!POSEIDON#[C,400,0,0]#!TRITON#[C,400,0,0]#!NAUTILUS#[C,400,0,0]"),
+        ("Increase Torque", "[U,1000,1000,100,100,1000]"),
         ("Disassemble","!NEPTUNE#[C,-200,0,-1000]#!POSEIDON#[C,-200,0,1000]#!TRITON#[C,-200,0,-1000]#!CETUS#[C,-200,0,1000]"),
+        ("Disassemble - Direct","!NEPTUNE#[eC,720,0,0,720]#!POSEIDON#[C,0,720,720,0]#!TRITON#[C,720,0,0,720]#!CETUS#[C,0,720,720,0]"),
     ],
 
 
