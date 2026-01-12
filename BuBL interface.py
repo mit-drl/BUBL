@@ -592,7 +592,7 @@ button_groups = {
     "Disassembly": [
         ("Increase Torque", "[U,1000,1000,100,100,1000]"),
         ("Disassemble","!NEPTUNE#[C,-200,0,-1000]#!POSEIDON#[C,-200,0,1000]#!TRITON#[C,-200,0,-1000]#!CETUS#[C,-200,0,1000]"),
-        ("Disassemble - Direct","!NEPTUNE#[eC,720,0,0,720]#!POSEIDON#[C,0,720,720,0]#!TRITON#[C,720,0,0,720]#!CETUS#[C,0,720,720,0]"),
+        ("Disassemble - Direct","!NEPTUNE#[eC,720,0,0,720]#!POSEIDON#[eC,0,720,720,0]#!TRITON#[eC,720,0,0,720]#!NAUTILUS#[eC,0,720,720,0]#!OCEANUS#[eC,720,0,0,720]#!CETUS#[eC,0,720,720,0]#!LEVIATHAN#[eC,720,0,0,720]#!KRAKEN#[eC,0,720,720,0]"),
     ],
 
 
