@@ -841,7 +841,16 @@ def update_plot():
         drained += 1
 
         if not line.startswith("data:"):
-            print(line)
+            if line.startswith("[INFO]"):
+                print(line)
+            elif line.startswith("[SUCCESS]"):
+                print("\033[32m" + line + "\033[0m")
+            elif line.startswith("[WARNING]"):
+                print("\033[33m" + line + "\033[0m")
+            elif line.startswith("[ERROR]"):
+                print("\033[31m" + line + "\033[0m")
+            else:
+                print(line)
             continue
 
         tokens = line[5:].strip().replace(",", " ").split()
