@@ -146,6 +146,8 @@ def main():
     print("  tare")
     print("  thrust <num>")
     print("  scale <s1> <s2> <s3>")
+    print("  ramp <delta_us> <duration_s>")
+    print("  stop                  (stops ramp program)")
     print("  quit")
 
     stop_evt = threading.Event()
