@@ -19,7 +19,7 @@ mpl.rcParams.update({
     "axes.labelsize": 8,
     "lines.linewidth": 0.8,
 })
-
+# Control interface for commanding a BuBL over bluetooth low energy
 # -----------------------
 # Serial Port
 # -----------------------
