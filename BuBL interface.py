@@ -518,7 +518,7 @@ button_groups = {
         ("Stop Stream", "[B,0]"),
         ("Collect Data", "[Q,1]"),
         ("Stop Collect", "[Q,0]"),
-        ("Capture Image", "[O,1,1]"),
+        ("Capture Image", "[O,8,1,1]"),
         ("Capture Audio", "[I,3]"),
         ("Record All", "[R,1,20]"),
         ("Stop Recording", "[R,0,1]"),
@@ -595,6 +595,10 @@ button_groups = {
         ("Disassemble - Direct","!NEPTUNE#[eC,720,0,0,720]#!POSEIDON#[eC,0,720,720,0]#!TRITON#[eC,720,0,0,720]#!NAUTILUS#[eC,0,720,720,0]#!OCEANUS#[eC,720,0,0,720]#!CETUS#[eC,0,720,720,0]#!LEVIATHAN#[eC,720,0,0,720]#!KRAKEN#[eC,0,720,720,0]"),
     ],
 
+    "Mapping": [
+        ("Unique Imaging", "!NEPTUNE#[O,1,0.2,100]#!POSEIDON#[O,2,0.2,100]#!TRITON#[O,3,0.2,100]#!NAUTILUS#[O,4,0.2,100]#!OCEANUS#[O,5,0.2,100]#!CETUS#[O,6,0.2,100]#!LEVIATHAN#[O,7,0.2,100]#!KRAKEN#[O,8,0.2,100]")
+    ],
+
 
     "Chain Control": [
         ("Left Rear Thruster","[eC,400,0,0,0]"),
@@ -608,7 +612,7 @@ button_groups = {
         ("Hit Red", "[A,5,0.5,80,-0.4,-0.05,0,0,0,300,10,1]"),
         ("Hit Green", "[A,5,0.5,80,-0.4,-0.05,0,0,0,300,10,2]"),
         ("Hit Yellow", "[A,5,0.5,80,-0.4,-0.05,0,0,0,300,10,4]"),
-        ("Capture Image", "[O,1,1]"),
+        ("Capture Image", "[O,8,1,1]"),
     ],
 
     "Controllers": [
@@ -644,7 +648,7 @@ for label, _cmd in button_groups["Connection"]:
     multi_target_vars[label] = tk.BooleanVar(master=root, value=False)
 
 # Which groups become selectable modes:
-MODE_GROUPS = ["LiDAR", "Vision", "Chains", "Disassembly", "Chain Control", "Direct Fwd", "Direct Rev", "Tail", "Controllers", "Shapes"]
+MODE_GROUPS = ["LiDAR", "Vision", "Mapping", "Chains", "Disassembly", "Chain Control", "Direct Fwd", "Direct Rev", "Tail", "Controllers", "Shapes"]
 
 right_side_started = False
 current_col = 0  # track which column we're placing into on row=0
