@@ -13,12 +13,14 @@ import glob
 import matplotlib.image as mpimg
 import time
 import matplotlib as mpl
+
 mpl.rcParams.update({
     "font.size": 8,
     "axes.titlesize": 9,
     "axes.labelsize": 8,
     "lines.linewidth": 0.8,
 })
+
 # Control interface for commanding a BuBL over bluetooth low energy
 # -----------------------
 # Serial Port
@@ -74,7 +76,7 @@ threading.Thread(target=serial_reader, daemon=True).start()
 # Figure & Layout
 # -----------------------
 fig = plt.figure(figsize=(16, 20))
-# 4 rows, 4 cols. Row 0 tall for LiDARs; rows 1–2 for sensors; row 3 for power/audio/etc
+# 4 rows, 4 cols. Row 0 tall for LiDARs; rows 1–3 for sensors
 gs = gridspec.GridSpec(
     4, 4, figure=fig,
     hspace=0.25, wspace=0.25,
@@ -145,37 +147,37 @@ def _load_interface_image():
 _load_interface_image()
 
 # -----------------------
-# Axes (Rows 1–3) per your new layout
+# Axes (Rows 1–3) per your requested layout
 # -----------------------
-# Row 1: (col0) Thrust (time-series), (col1) Depth, (col2) Yaw; (col3) Motors spans rows 1–2
-ax_fwd   = fig.add_subplot(gs[1, 0])         # stays put
-ax_depth = fig.add_subplot(gs[1, 1])
-ax_yaw   = fig.add_subplot(gs[1, 2])
-ax_thrust = fig.add_subplot(gs[1:3, 3])      # NOW 2 tall: rows 1–2
+# Row 1: Forward Thrust, Lateral Thrust, Depth; Motors spans rows 1–2 (col3)
+ax_fwd    = fig.add_subplot(gs[1, 0])
+ax_lat    = fig.add_subplot(gs[1, 1])
+ax_depth  = fig.add_subplot(gs[1, 2])
+ax_thrust = fig.add_subplot(gs[1:3, 3])      # 2 tall: rows 1–2
 
-ax_fwd.set_title("Thrust")
+ax_fwd.set_title("Forward Thrust")
+ax_lat.set_title("Lateral Thrust")
 ax_depth.set_title("Depth")
-ax_yaw.set_title("Yaw")
 ax_thrust.set_title("Motors")
 
-# Row 2: Roll, Pitch, Temperature (unchanged)
-ax_roll        = fig.add_subplot(gs[2, 0])
-ax_pitch       = fig.add_subplot(gs[2, 1])
-ax_temperature = fig.add_subplot(gs[2, 2])
+# Row 2: Roll, Pitch, Yaw
+ax_roll  = fig.add_subplot(gs[2, 0])
+ax_pitch = fig.add_subplot(gs[2, 1])
+ax_yaw   = fig.add_subplot(gs[2, 2])
 
 ax_roll.set_title("Roll")
 ax_pitch.set_title("Pitch")
-ax_temperature.set_title("Temperature")
+ax_yaw.set_title("Yaw")
 
-# Row 3: Voltage, NEW RSSI (replaces old Current spot), Audio, and Current moved to col3
+# Row 3: Voltage, Signal Strength, FREE plot; Current MUST stay below the thrust plot (col3)
 ax_voltage = fig.add_subplot(gs[3, 0])
-ax_rssi    = fig.add_subplot(gs[3, 1])       # NEW: goes where Current used to be
-ax_audio   = fig.add_subplot(gs[3, 2])
-ax_current = fig.add_subplot(gs[3, 3])       # MOVED: into the third row under Motors
+ax_rssi    = fig.add_subplot(gs[3, 1])
+ax_free    = fig.add_subplot(gs[3, 2])
+ax_current = fig.add_subplot(gs[3, 3])       # stays below thrust plot (col3)
 
 ax_voltage.set_title("Voltage")
 ax_rssi.set_title("Signal Strength")
-ax_audio.set_title("Audio Level")
+ax_free.set_title("FREE")
 ax_current.set_title("Current")
 
 # -----------------------
@@ -183,16 +185,20 @@ ax_current.set_title("Current")
 # -----------------------
 line_depth,      = ax_depth.plot([], [], '-', color='blue')
 line_autonomous_depth, = ax_depth.plot([], [], '-', color='red')
+
 line_fwd,        = ax_fwd.plot([], [], '-', color='red')
-line_yaw,        = ax_yaw.plot([], [], '-', color='blue')
-line_autonomous_yaw, = ax_yaw.plot([], [], '-', color='red')
+line_lat,        = ax_lat.plot([], [], '-', color='red')
+
 line_roll,       = ax_roll.plot([], [], '-', color='blue')
 line_pitch,      = ax_pitch.plot([], [], '-', color='blue')
+line_yaw,        = ax_yaw.plot([], [], '-', color='blue')
+line_autonomous_yaw, = ax_yaw.plot([], [], '-', color='red')  # kept (parsed), optional display
+
 line_voltage,    = ax_voltage.plot([], [], '-', color='blue')
 line_current,    = ax_current.plot([], [], '-', color='blue')
-line_temperature,= ax_temperature.plot([], [], '-', color='blue')
-line_audio,      = ax_audio.plot([], [], '-', color='blue')
-line_rssi,       = ax_rssi.plot([], [], '-', color='blue')  # NEW
+line_rssi,       = ax_rssi.plot([], [], '-', color='blue')
+
+line_free,       = ax_free.plot([], [], '-', color='blue')    # selectable signal
 
 bar_positions = np.arange(4)
 bar_labels    = ["T1", "T2", "T3", "T4"]
@@ -213,10 +219,12 @@ history_voltage = []
 history_current = []
 history_temperature = []
 history_audio_level = []
-history_rssi    = []  # NEW
+history_rssi    = []
 history_autonomous_fwd   = []
+history_autonomous_lat   = []
 history_autonomous_depth = []
 history_autonomous_yaw   = []
+history_omega            = []   # FC_omega renamed to omega
 
 # -----------------------
 # Tkinter GUI
@@ -224,6 +232,7 @@ history_autonomous_yaw   = []
 root = tk.Tk()
 root.title("BuBL Command Interface")
 root.geometry("1300x800")
+free_var = tk.StringVar(master=root, value="temperature")
 
 root.rowconfigure(0, weight=1)
 root.rowconfigure(1, weight=0)
@@ -260,8 +269,9 @@ freeze_figure_size()
 # Hide ALL x-axis ticks/labels
 # -----------------------
 for ax in (
-    ax_fwd, ax_depth, ax_yaw, ax_roll, ax_pitch,
-    ax_temperature, ax_voltage, ax_current, ax_audio, ax_rssi
+    ax_fwd, ax_lat, ax_depth,
+    ax_roll, ax_pitch, ax_yaw,
+    ax_voltage, ax_current, ax_rssi, ax_free
 ):
     ax.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
     ax.set_xlabel('')
@@ -284,7 +294,7 @@ freeze_layout(fig)
 control_frame = ttk.Frame(root)
 control_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
 
-# FPS (kept as-is; remove if you don't want it)
+# FPS (kept as-is)
 fps_label = ttk.Label(root, text="FPS: ", font=("Segoe UI", 10))
 fps_label.place(x=2, y=0)
 _fps = {"frames": 0, "t0": time.perf_counter()}
@@ -298,18 +308,25 @@ def update_fps():
         _fps["frames"] = 0
         _fps["t0"] = time.perf_counter()
 
+# -----------------------
 # Fixed limits
+# -----------------------
 ax_fwd.set_ylim(-1000, 1000)
+ax_lat.set_ylim(-1000, 1000)
 ax_depth.set_ylim(-5, 30)
+
 ax_roll.set_ylim(-30, 30)
 ax_pitch.set_ylim(-30, 30)
 ax_yaw.set_ylim(-200, 200)
+
 ax_voltage.set_ylim(0, 5)
 ax_current.set_ylim(0, 3)
-ax_temperature.set_ylim(10, 35)
-ax_audio.set_ylim(0, 110)
 ax_rssi.set_ylim(-150, 0)
-for a in (ax_fwd, ax_depth, ax_roll, ax_pitch, ax_yaw, ax_voltage, ax_current, ax_temperature, ax_audio, ax_rssi):
+
+# FREE plot limits are set dynamically based on selection
+ax_free.set_ylim(10, 35)
+
+for a in (ax_fwd, ax_lat, ax_depth, ax_roll, ax_pitch, ax_yaw, ax_voltage, ax_current, ax_rssi, ax_free):
     a.set_xlim(0, history_length)
 
 # -----------------------
@@ -326,18 +343,18 @@ def make_value_text(ax):
     )
 
 txt_fwd         = make_value_text(ax_fwd)
+txt_lat         = make_value_text(ax_lat)
 txt_depth       = make_value_text(ax_depth)
 txt_roll        = make_value_text(ax_roll)
 txt_pitch       = make_value_text(ax_pitch)
 txt_yaw         = make_value_text(ax_yaw)
 txt_voltage     = make_value_text(ax_voltage)
 txt_current     = make_value_text(ax_current)
-txt_temperature = make_value_text(ax_temperature)
-txt_audio       = make_value_text(ax_audio)
-txt_rssi        = make_value_text(ax_rssi)  # NEW
+txt_rssi        = make_value_text(ax_rssi)
+txt_free        = make_value_text(ax_free)
 
 # --- MCU time + FC state overlay (anchored to the robot PNG axes) ---
-x0 = 0.10   # left edge anchor (move this to taste)
+x0 = 0.10   # left edge anchor
 y0 = -0.30  # bottom line baseline
 dy = 0.11   # vertical spacing between lines
 
@@ -362,9 +379,25 @@ FC_STATE_MAP = {
     3: "direct",
 }
 
+
+
+def _apply_free_ylim_and_title():
+    sel = free_var.get()
+    if sel == "temperature":
+        ax_free.set_title("Temperature")
+        ax_free.set_ylim(10, 35)
+    elif sel == "audio level":
+        ax_free.set_title("Audio Level")
+        ax_free.set_ylim(0, 110)
+    else:
+        ax_free.set_title("Angular Rate")
+        ax_free.set_ylim(-0.5, 3.5)
+
 def update_value_texts():
     if history_autonomous_fwd:
         txt_fwd.set_text(f"{history_autonomous_fwd[-1]:7.1f}")
+    if history_autonomous_lat:
+        txt_lat.set_text(f"{history_autonomous_lat[-1]:7.1f}")
     if history_depth:
         txt_depth.set_text(f"{history_depth[-1]:7.1f}")
     if history_roll:
@@ -377,12 +410,16 @@ def update_value_texts():
         txt_voltage.set_text(f"{history_voltage[-1]:7.2f}")
     if history_current:
         txt_current.set_text(f"{history_current[-1]:7.2f}")
-    if history_temperature:
-        txt_temperature.set_text(f"{history_temperature[-1]:7.1f}")
-    if history_audio_level:
-        txt_audio.set_text(f"{history_audio_level[-1]:7.1f}")
     if history_rssi:
         txt_rssi.set_text(f"{history_rssi[-1]:7.1f}")
+
+    sel = free_var.get()
+    if sel == "temperature" and history_temperature:
+        txt_free.set_text(f"{history_temperature[-1]:7.1f}")
+    elif sel == "audio level" and history_audio_level:
+        txt_free.set_text(f"{history_audio_level[-1]:7.1f}")
+    elif sel == "omega" and history_omega:
+        txt_free.set_text(f"{history_omega[-1]:7.2f}")
 
 # -----------------------
 # Command Entry & Buttons
@@ -396,6 +433,52 @@ cmd_entry = ttk.Entry(cmd_frame, textvariable=command_var, width=40)
 cmd_entry.pack(side=tk.LEFT, padx=5)
 cmd_entry.focus_set()
 
+# --- FREE plot dropdown moved to the RIGHT of the command line (as requested) ---
+free_combo = ttk.Combobox(
+    cmd_frame,
+    textvariable=free_var,
+    values=["temperature", "audio level", "omega"],
+    state="readonly",
+    width=14
+)
+free_combo.pack(side=tk.LEFT)
+free_combo.current(0)
+
+def refresh_free_plot_from_history():
+    """Immediately rebind the FREE plot line to the selected history buffer."""
+    sel = free_var.get()
+
+    if sel == "temperature":
+        y = history_temperature
+    elif sel == "audio level":
+        y = history_audio_level
+    else:
+        y = history_omega
+
+    line_free.set_data(range(len(y)), y)
+
+    # Update numeric overlay for FREE plot too
+    update_value_texts()
+
+def on_free_select(_evt=None):
+    _apply_free_ylim_and_title()
+    refresh_free_plot_from_history()
+
+    # IMPORTANT: titles/ylims are not blitted artists -> force full redraw + recache background
+    _bg["img"] = None
+    fig.canvas.draw()
+
+free_combo.bind("<<ComboboxSelected>>", on_free_select)
+
+# Also catch programmatic changes reliably
+def _free_trace(*_args):
+    on_free_select()
+
+free_var.trace_add("write", _free_trace)
+
+_apply_free_ylim_and_title()
+refresh_free_plot_from_history()
+
 command_history = []
 history_index = -1
 
@@ -407,18 +490,15 @@ def build_multi_target_cmd(cmd: str) -> str:
     If no toggles are on, or if the command already contains '!' or '#'
     (i.e., it is already preformatted for routing / connection), return cmd unchanged.
     """
-    # Don't touch pre-routed / connection commands (e.g. "!NEPTUNE", chain macros, etc.)
     if '!' in cmd or '#' in cmd:
         return cmd
 
     active = [name for name, var in multi_target_vars.items() if var.get()]
     if not active:
-        return cmd  # behave exactly as before
+        return cmd
 
-    # Build concatenated broadcast string without trailing '#'
     pieces = [f"!{name}#{cmd}" for name in active]
     return "#".join(pieces)
-
 
 def send_command(cmd):
     global command_history
@@ -426,12 +506,9 @@ def send_command(cmd):
         final_cmd = build_multi_target_cmd(cmd)
         ser.write((final_cmd + "\n").encode('utf-8'))
         ser.flush()
-        # Store what the user actually typed / pressed in history,
-        # not the expanded broadcast string.
         command_history.append(cmd)
     except Exception as e:
         print("Error sending command:", e)
-
 
 def on_return(event):
     global history_index
@@ -492,17 +569,19 @@ button_groups = {
         ("Disable", "[H]"),
     ],
     "Motion & Calibration": [
-        ("Hover", "[C,0,0,0]"),
-        ("Dive", "[C,0,10,0]"),
-        ("Forward", "[C,500,0,0]"),
-        ("Reverse", "[C,-500,0,0]"),
-        ("Rotate 0", "[C,0,0,360]"),
-        ("Rotate 360", "[C,0,0,180]"),
-        ("Gyro Cal", "[G]"),
-        ("LiDAR Cal", "[V]"),
+        ("Forward", "[C,500,0,0,0]"),
+        ("Reverse", "[C,-500,0,0,0]"),
+        ("Left", "[C,0,100,0,0]"),
+        ("Right", "[C,0,-100,0,0]"),
+        ("Surface", "[C,0,0,0,0]"),
+        ("Dive", "[C,0,0,10,0]"),
+        ("Rotate Left", "[C,0,0,0,-360]"),
+        ("Rotate Right", "[C,0,0,0,360]"),
+        ("Gyro Cal.", "[G]"),
+        ("LiDAR Cal.", "[V]"),
     ],
     "Controller": [
-        ("Quick Setup", "[H]\n[U,1000,1000,100,100,500]\n[F,0,800,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[W,200,200,200,200]\n[M,280,900]"),
+        ("Quick Setup", "[H]\n[U,1000,1000,1000,100,100,500]\n[F,0,0,800,0,0,0]\n[T,1,1,1,1]\n[L,0,10,10,10]\n[W,200,200,200,200]\n[M,280,900]"),
         ("Set Yaw", "[Y,0]"),
         ("Set PID Depth", "[Pn,1,20,1,5]"),
         ("Zero PID Depth", "[Pn,1,0,0,0]"),
@@ -524,49 +603,33 @@ button_groups = {
         ("Stop Recording", "[R,0,1]"),
         ("Record Basic", "[R,2,20]"),
         ("Record Power", "[R,3,50]"),
-        # ("Record RPY", "[R,4,50]"),
-        # ("Record Thrust", "[R,5,50]"),
     ],
 
     "LiDAR": [
         ("(CLEAR) Wonder Slow", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,600,0]"),
-        # ("(CLEAR) Wonder Fast", "[A,3,400,1,1.0,1.0,2.0,200,800,2,800,0]"),
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ],
-    "Direct Fwd": [
+    "Direct Thrust": [
+        ("Reset Thrust", "[T,0,0,0,0 ]"),
         ("40% Forward", "[eC,320,0,320,0]"),
-        ("45% Forward", "[eC,360,0,360,0]"),
         ("50% Forward", "[eC,400,0,400,0]"),
-        ("55% Forward", "[eC,440,0,440,0]"),
         ("60% Forward", "[eC,480,0,480,0]"),
-        ("65% Forward", "[eC,520,0,520,0]"),
         ("70% Forward", "[eC,560,0,560,0]"),
-        ("70% Forward", "[eC,600,0,600,0]"),
         ("80% Forward", "[eC,640,0,640,0]"),
-        ("85% Forward", "[eC,680,0,680,0]"),
         ("90% Forward", "[eC,720,0,720,0]"),
-        ("95% Forward", "[eC,760,0,760,0]"),
         ("100% Forward","[eC,800,0,800,0]"),
-    ],
-    "Direct Rev": [
         ("40% Reverse", "[eC,0,320,0,320]"),
-        ("45% Reverse", "[eC,0,360,0,360]"),
         ("50% Reverse", "[eC,0,400,0,400]"),
-        ("55% Reverse", "[eC,0,440,0,440]"),
         ("60% Reverse", "[eC,0,480,0,480]"),
-        ("65% Reverse", "[eC,0,520,0,520]"),
         ("70% Reverse", "[eC,0,560,0,560]"),
-        ("70% Reverse", "[eC,0,600,0,600]"),
         ("80% Reverse", "[eC,0,640,0,640]"),
-        ("85% Reverse", "[eC,0,680,0,680]"),
         ("90% Reverse", "[eC,0,720,0,720]"),
-        ("95% Reverse", "[eC,0,760,0,760]"),
         ("100% Reverse","[eC,0,800,0,800]"),
     ],
     "Tail": [
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
-        ("Increase Torque", "[U,1000,1000,100,100,1000]"),
-        ("Decrease Torque", "[U,1000,1000,100,100,500]"),
+        ("Increase Torque", "[U,1000,1000,1000,100,100,1000]"),
+        ("Decrease Torque", "[U,1000,1000,1000,100,100,500]"),
         ("Wiggle", "[A,6,2,1000,1,0,0,0]"),
         ("Wiggle Fwd S", "[A,6,2,1000,1,0,500,0]"),
         ("Wiggle Dive", "[A,6,2,1000,1,0,0,10]"),
@@ -575,36 +638,14 @@ button_groups = {
         ("Record Power", "[R,3,50]\n[N,Begin Tail Experiment]"),
         ("Stop Record", "[R,0,1]\n[N,End Tail Experiment]"),
     ],
-    "Chains": [
-        ("Note One Start", "[N,O Start]"),
-        ("Note One Stop", "[N,O Stop]"),
-        ("Note Two Start", "[N,OO Start]"),
-        ("Note Two Stop", "[N,OO Stop]"),
-        ("Note Three Start", "[N,OOO Start]"),
-        ("Note Three Stop", "[N,OOO Stop]"),
-        ("Note Four Start", "[N,OOOO Start]"),
-        ("Note Four Stop", "[N,OOOO Stop]"),
-        ("Note Five Start", "[N,OOOOO Start]"),
-        ("Note Five Stop", "[N,OOOOO Stop]"),
-        ("[C,800,0,0]","[C,800,0,0]"),
-    ],
 
     "Disassembly": [
-        ("Increase Torque", "[U,1000,1000,100,100,1000]"),
-        ("Disassemble","!NEPTUNE#[C,-200,0,-1000]#!POSEIDON#[C,-200,0,1000]#!TRITON#[C,-200,0,-1000]#!CETUS#[C,-200,0,1000]"),
+        ("Increase Torque", "[U,1000,1000,1000,100,100,1000]"),
         ("Disassemble - Direct","!NEPTUNE#[eC,720,0,0,720]#!POSEIDON#[eC,0,720,720,0]#!TRITON#[eC,720,0,0,720]#!NAUTILUS#[eC,0,720,720,0]#!OCEANUS#[eC,720,0,0,720]#!CETUS#[eC,0,720,720,0]#!LEVIATHAN#[eC,720,0,0,720]#!KRAKEN#[eC,0,720,720,0]"),
     ],
 
     "Mapping": [
         ("Unique Imaging", "!NEPTUNE#[O,1,0.2,100]#!POSEIDON#[O,2,0.2,100]#!TRITON#[O,3,0.2,100]#!NAUTILUS#[O,4,0.2,100]#!OCEANUS#[O,5,0.2,100]#!CETUS#[O,6,0.2,100]#!LEVIATHAN#[O,7,0.2,100]#!KRAKEN#[O,8,0.2,100]")
-    ],
-
-
-    "Chain Control": [
-        ("Left Rear Thruster","[eC,400,0,0,0]"),
-        ("Right Rear Thruster","[eC,0,0,400,0]"),
-        ("CW Thrust","[eC,0,400,400,0]"),
-        ("CCW Thrust","[eC,400,0,0,400]"),
     ],
 
     "Vision": [
@@ -622,9 +663,9 @@ button_groups = {
         ("Thrust - variable", "[T,0,0,0,0]"),
         ("Thrust - rear only", "[T,1,-1,1,-1]"),
         ("Thrust - front only", "[T,-1,1,-1,1]"),
-        ("FF 400", "[F,0,400,0,0,0]"),
-        ("FF 600", "[F,0,600,0,0,0]"),
-        ("FF 800", "[F,0,800,0,0,0]"),
+        ("FF 400", "[F,0,0,400,0,0,0]"),
+        ("FF 600", "[F,0,0,600,0,0,0]"),
+        ("FF 800", "[F,0,0,800,0,0,0]"),
     ],
 
     "Shapes": [
@@ -641,14 +682,12 @@ button_groups = {
 # -----------------------
 # Multi-robot broadcast support
 # -----------------------
-# One BooleanVar per robot in the Connection group.
 multi_target_vars = {}
 for label, _cmd in button_groups["Connection"]:
-    # Explicitly tie the BooleanVars to the Tk root
     multi_target_vars[label] = tk.BooleanVar(master=root, value=False)
 
-# Which groups become selectable modes:
-MODE_GROUPS = ["LiDAR", "Vision", "Mapping", "Chains", "Disassembly", "Chain Control", "Direct Fwd", "Direct Rev", "Tail", "Controllers", "Shapes"]
+MODE_GROUPS = ["LiDAR", "Vision", "Mapping", "Disassembly",
+               "Direct Thrust", "Tail", "Controllers", "Shapes"]
 
 right_side_started = False
 current_col = 0  # track which column we're placing into on row=0
@@ -662,7 +701,6 @@ def _place_two_per_row_buttons(parent, items):
 # 1) Place all groups up through and including "Data & Recording"
 for group_name, items in button_groups.items():
     if group_name in MODE_GROUPS:
-        # Skip placing these now; they'll live inside the mode pane
         continue
 
     lf = ttk.LabelFrame(button_frame, text=group_name)
@@ -682,13 +720,10 @@ for group_name, items in button_groups.items():
         def on_select(_evt=None):
             target = combo.get()
             cmd = f"!{target}"
-            # print("Connecting with command:", cmd)
             send_command(cmd)
 
         combo.bind("<<ComboboxSelected>>", on_select)
 
-        # --- Multi-robot toggles directly beneath the connection dropdown ---
-        # One toggle per robot name in the Connection list.
         toggles_frame = ttk.Frame(lf)
         toggles_frame.grid(row=1, column=0, columnspan=2,
                            sticky="w", padx=2, pady=(2, 0))
@@ -696,56 +731,46 @@ for group_name, items in button_groups.items():
         PER_ROW = 2
         for i, name in enumerate(names):
             var = multi_target_vars[name]
-            multi_target_vars[name] = var
             r, c = divmod(i, PER_ROW)
             chk = ttk.Checkbutton(toggles_frame, text=name, variable=var)
             chk.grid(row=r, column=c, padx=2, pady=1, sticky="w")
 
     elif group_name == "Power":
-        # Stack vertically: Enable above Disable
         for i, (label, cmd_code) in enumerate(items):
             btn = ttk.Button(lf, text=label,
                              command=lambda c=cmd_code: send_command(c))
             btn.grid(row=i, column=0, padx=2, pady=2, sticky="ew")
 
     else:
-        # Default: two per row
         _place_two_per_row_buttons(lf, items)
 
     current_col += 1
     if group_name == "Data & Recording":
         right_side_started = True
-        break  # stop after Data & Recording; everything else goes in the mode pane
-
+        break
 
 # 2) Build the mode pane in the next column to the right
 modes_lf = ttk.LabelFrame(button_frame, text="Select")
 modes_lf.grid(row=0, column=current_col, padx=5, pady=2, sticky="n")
 
-# Stack container that can raise one frame at a time
 stack = ttk.Frame(modes_lf)
 stack.grid(row=0, column=0, sticky="nsew")
 
-# --- Frames ---
 mode_select_frame = ttk.Frame(stack)
 mode_select_frame.grid(row=0, column=0, sticky="nsew")
 
-mode_frames = {}  # name -> frame
+mode_frames = {}
 for mode_name in MODE_GROUPS:
     f = ttk.Frame(stack)
     f.grid(row=0, column=0, sticky="nsew")
     mode_frames[mode_name] = f
 
-# Helper to switch views
 def show_mode(name):
     if name == "__select__":
         mode_select_frame.tkraise()
     else:
         mode_frames[name].tkraise()
 
-# ---------------------------------------------------------------------
-# MODE SELECT VIEW: row-first, 6 per row (no title text)
-# ---------------------------------------------------------------------
 MAX_PER_ROW = 4
 
 for i, mode_name in enumerate(MODE_GROUPS):
@@ -758,9 +783,6 @@ for i, mode_name in enumerate(MODE_GROUPS):
 for c in range(MAX_PER_ROW):
     mode_select_frame.columnconfigure(c, weight=1)
 
-# ---------------------------------------------------------------------
-# INDIVIDUAL MODE FRAMES: row-first, 6 per row
-# ---------------------------------------------------------------------
 for mode_name in MODE_GROUPS:
     items = button_groups.get(mode_name, [])
 
@@ -779,11 +801,7 @@ for mode_name in MODE_GROUPS:
                          command=lambda c=cmd_code: send_command(c))
         btn.grid(row=r, column=c, padx=2, pady=2, sticky="ew")
 
-# Start on the selector
 show_mode("__select__")
-
-def button_command(cmd_code):
-    send_command(cmd_code)
 
 # -----------------------
 # Blitting Setup
@@ -795,16 +813,16 @@ def _on_draw(_event=None):
     _bg["img"] = fig.canvas.copy_from_bbox(fig.bbox)
 fig.canvas.mpl_connect("draw_event", _on_draw)
 
-# Animated artists
 ANIMATED = [
-    line_depth, line_autonomous_depth, line_fwd,
+    line_depth, line_autonomous_depth, line_fwd, line_lat,
     line_roll, line_pitch, line_yaw, line_autonomous_yaw,
-    line_voltage, line_current, line_temperature, line_audio, line_rssi,
+    line_voltage, line_current, line_rssi, line_free,
     img_left, img_right, centroid_left_pt, centroid_right_pt,
     txt_lidar_left_dist, txt_lidar_right_dist,
     *list(bar_container),
-    txt_fwd, txt_depth, txt_roll, txt_pitch, txt_yaw, txt_voltage, txt_current, txt_temperature, txt_audio, txt_rssi,
-    txt_mcutime, txt_fcstate,  # NEW
+    txt_fwd, txt_lat, txt_depth, txt_roll, txt_pitch, txt_yaw,
+    txt_voltage, txt_current, txt_rssi, txt_free,
+    txt_mcutime, txt_fcstate,
 ]
 for a in ANIMATED:
     a.set_animated(True)
@@ -858,39 +876,70 @@ def update_plot():
             continue
 
         tokens = line[5:].strip().replace(",", " ").split()
-        # Expecting 56 tokens total now (added MCUtime + FC_state; RSSI_filtered final)
-        if len(tokens) != 56:
+
+        # Transmitter now prints:
+        # 32 lidar
+        # depth roll pitch yaw voltage current
+        # a_fwd a_lat a_depth a_yaw
+        # t1 t2 t3 t4
+        # temp sound
+        # cL_r cL_c Ldis cR_r cR_c Rdis
+        # MCUtime FC_state FC_omega
+        # RSSI_filtered
+        #
+        # total = 58 tokens
+        if len(tokens) != 58:
             continue
 
         try:
             # 0..31 LiDAR ints
             lidar_values = [int(t) for t in tokens[:32]]
-            # 32..37 sensors: depth, roll, pitch, yaw, voltage, current
-            sensor_values = [float(t) for t in tokens[32:38]]
-            autonomous_fwd      = float(tokens[38])
-            autonomous_depth    = float(tokens[39])
-            autonomous_yaw      = float(tokens[40])
-            thrust_1            = float(tokens[41])
-            thrust_2            = float(tokens[42])
-            thrust_3            = float(tokens[43])
-            thrust_4            = float(tokens[44])
-            temperature_val     = float(tokens[45])
-            audio_level         = float(tokens[46])
-            centroid_left_row   = float(tokens[47])
-            centroid_left_col   = float(tokens[48])
-            distance_left       = float(tokens[49])
-            centroid_right_row  = float(tokens[50])
-            centroid_right_col  = float(tokens[51])
-            distance_right      = float(tokens[52])
-            mcu_time_min        = float(tokens[53])   # NEW
-            fc_state_raw        = float(tokens[54])   # NEW
-            rssi_filtered       = float(tokens[55])   # MOVED (final token now)
+
+            # 32..37 sensors
+            depth_val   = float(tokens[32])
+            roll_val    = float(tokens[33])
+            pitch_val   = float(tokens[34])
+            yaw_val     = float(tokens[35])
+            voltage_val = float(tokens[36])
+            current_val = float(tokens[37])
+
+            # autonomy
+            autonomous_fwd   = float(tokens[38])
+            autonomous_lat   = float(tokens[39])  # NEW: a_lat -> autonomous_lat
+            autonomous_depth = float(tokens[40])
+            autonomous_yaw   = float(tokens[41])
+
+            # motors
+            thrust_1 = float(tokens[42])
+            thrust_2 = float(tokens[43])
+            thrust_3 = float(tokens[44])
+            thrust_4 = float(tokens[45])
+
+            # free signals
+            temperature_val = float(tokens[46])
+            audio_level     = float(tokens[47])
+
+            # lidar centroid/dists
+            centroid_left_row   = float(tokens[48])
+            centroid_left_col   = float(tokens[49])
+            distance_left       = float(tokens[50])
+            centroid_right_row  = float(tokens[51])
+            centroid_right_col  = float(tokens[52])
+            distance_right      = float(tokens[53])
+
+            # overlays
+            mcu_time_min  = float(tokens[54])
+            fc_state_raw  = float(tokens[55])
+            omega         = float(tokens[56])     # NEW: FC_omega -> omega
+
+            # tx-side rssi
+            rssi_filtered = float(tokens[57])
+
         except ValueError:
             continue
 
         left_scan  = np.array(lidar_values[:16]).reshape((4, 4))
         right_scan = np.array(lidar_values[16:]).reshape((4, 4))
-        depth_val, roll_val, pitch_val, yaw_val, voltage_val, current_val = sensor_values
 
         # LiDAR updates
         img_left.set_data(left_scan)
@@ -909,38 +958,56 @@ def update_plot():
         history_yaw.append(yaw_val)
         history_voltage.append(voltage_val)
         history_current.append(current_val)
+
         history_temperature.append(temperature_val)
         history_audio_level.append(audio_level)
-        history_rssi.append(rssi_filtered)  # NEW
+        history_omega.append(omega)
+
+        history_rssi.append(rssi_filtered)
+
         history_autonomous_fwd.append(autonomous_fwd)
+        history_autonomous_lat.append(autonomous_lat)
         history_autonomous_depth.append(autonomous_depth)
         history_autonomous_yaw.append(autonomous_yaw)
 
         # Trim
         if len(history_depth) > history_length:
             history_depth.pop(0); history_roll.pop(0); history_pitch.pop(0); history_yaw.pop(0)
-            history_voltage.pop(0); history_current.pop(0); history_temperature.pop(0); history_audio_level.pop(0)
+            history_voltage.pop(0); history_current.pop(0)
+            history_temperature.pop(0); history_audio_level.pop(0); history_omega.pop(0)
             history_rssi.pop(0)
-            history_autonomous_fwd.pop(0); history_autonomous_depth.pop(0); history_autonomous_yaw.pop(0)
+            history_autonomous_fwd.pop(0); history_autonomous_lat.pop(0)
+            history_autonomous_depth.pop(0); history_autonomous_yaw.pop(0)
 
         # Set data
         line_depth.set_data(range(len(history_depth)), history_depth)
         line_autonomous_depth.set_data(range(len(history_autonomous_depth)), history_autonomous_depth)
+
         line_fwd.set_data(range(len(history_autonomous_fwd)), history_autonomous_fwd)
+        line_lat.set_data(range(len(history_autonomous_lat)), history_autonomous_lat)
+
         line_roll.set_data(range(len(history_roll)), history_roll)
         line_pitch.set_data(range(len(history_pitch)), history_pitch)
         line_yaw.set_data(range(len(history_yaw)), history_yaw)
         line_autonomous_yaw.set_data(range(len(history_autonomous_yaw)), history_autonomous_yaw)
+
         line_voltage.set_data(range(len(history_voltage)), history_voltage)
         line_current.set_data(range(len(history_current)), history_current)
-        line_temperature.set_data(range(len(history_temperature)), history_temperature)
-        line_audio.set_data(range(len(history_audio_level)), history_audio_level)
-        line_rssi.set_data(range(len(history_rssi)), history_rssi)  # NEW
+        line_rssi.set_data(range(len(history_rssi)), history_rssi)
+
+        # FREE plot (selectable)
+        sel = free_var.get()
+        if sel == "temperature":
+            line_free.set_data(range(len(history_temperature)), history_temperature)
+        elif sel == "audio level":
+            line_free.set_data(range(len(history_audio_level)), history_audio_level)
+        else:
+            line_free.set_data(range(len(history_omega)), history_omega)
 
         # Overlays
         update_value_texts()
 
-        # --- NEW: update MCU time + FC state overlay ---
+        # MCU time + FC state overlay
         _fc_state_i = int(round(fc_state_raw))
         _fc_state_s = FC_STATE_MAP.get(_fc_state_i, str(_fc_state_i))
         txt_mcutime.set_text(f"Operating Time:  {int(round(mcu_time_min))} mins")
