@@ -653,7 +653,7 @@ button_groups = {
     ],
 
     "Mapping": [
-        ("Unique Imaging", "!NEPTUNE#[O,1,0.2,100]#!POSEIDON#[O,2,0.2,100]#!TRITON#[O,3,0.2,100]#!NAUTILUS#[O,4,0.2,100]#!OCEANUS#[O,5,0.2,100]#!CETUS#[O,6,0.2,100]#!LEVIATHAN#[O,7,0.2,100]#!KRAKEN#[O,8,0.2,100]")
+        ("Unique Imaging", "!NEPTUNE#[O,8,0.2,150,0.5]#!TRITON#[O,8,0.2,150,0.4]#!NAUTILUS#[O,8,0.2,150,0.3]#!OCEANUS#[O,8,0.2,150,0.2]#!CETUS#[O,8,0.2,150,0.1]#!LEVIATHAN#[O,8,0.2,150,0.3]#!KRAKEN#[O,8,0.2,150,0.2]")
     ],
 
     "Vision": [
