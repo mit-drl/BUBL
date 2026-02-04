@@ -597,14 +597,22 @@ button_groups = {
         ("Stop Stream", "[B,0]"),
         ("Collect Data", "[Q,1]"),
         ("Stop Collect", "[Q,0]"),
-        ("Capture Image", "[O,8,1,1]"),
+        ("Capture Image", "[O,8,1,1,2]"),
         ("Capture Audio", "[I,3]"),
         ("Record All", "[R,1,20]"),
         ("Stop Recording", "[R,0,1]"),
         ("Record Basic", "[R,2,20]"),
         ("Record Power", "[R,3,50]"),
     ],
-
+    "Experiments": [
+        ("Image HQ", "[O,8,1,10,0.5]"),
+        ("Image FS", "[O,5,1,10,0.5]"),
+        ("One Image", "[O,8,1,1,0.5]"),
+        ("Record Gyro", "[R,6,50]"),
+        ("Stop Recording", "[R,0,1]"),
+        ("Collect Data", "[Q,1]"),
+        ("Stop Collect", "[Q,0]"),
+    ],
     "LiDAR": [
         ("(CLEAR) Wonder Slow", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,600,0]"),
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
@@ -686,7 +694,7 @@ multi_target_vars = {}
 for label, _cmd in button_groups["Connection"]:
     multi_target_vars[label] = tk.BooleanVar(master=root, value=False)
 
-MODE_GROUPS = ["LiDAR", "Vision", "Mapping", "Disassembly",
+MODE_GROUPS = ["Experiments","LiDAR", "Vision", "Mapping", "Disassembly",
                "Direct Thrust", "Tail", "Controllers", "Shapes"]
 
 right_side_started = False
