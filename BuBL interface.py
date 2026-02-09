@@ -604,7 +604,7 @@ button_groups = {
         ("Record Basic", "[R,2,20]"),
         ("Record Power", "[R,3,50]"),
     ],
-    "Experiments": [
+    "Imaging Experiments": [
         ("Image HQ", "[O,8,1,10,0.5]"),
         ("Image FS", "[O,5,1,10,0.5]"),
         ("One Image", "[O,8,1,1,0.5]"),
@@ -613,9 +613,19 @@ button_groups = {
         ("Collect Data", "[Q,1]"),
         ("Stop Collect", "[Q,0]"),
     ],
+    "Chain Experiments": [
+        ("Steer Front", "[A,7,-5,0,0]"),
+        ("Steer Rear", "[A,7,5,0,0]"),
+        ("Zero PID Yaw", "[Pn,4,0,0,0]"),
+        ("Only D Yaw", "[Pn,4,0,0,2]"),
+        ("Set Yaw 0", "[Y,0]"),
+        ("Set Yaw 90", "[Y,90]"),
+        ("Set Yaw -90", "[Y,-90]"),
+        ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
+    ],
     "LiDAR": [
         ("Wonder", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,600,0]"),
-        ("Wall Follow", "[A,4,400,1,1.0,1.0,1.0,800,150,600,400,0.5,0.25,,600,0]"),
+        ("Wall Follow", "[A,4,400,1,1.0,1.0,1.0,800,150,600,400,0.5,0.25,600,0]"),
         ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ],
     "Direct Thrust": [
@@ -700,8 +710,8 @@ multi_target_vars = {}
 for label, _cmd in button_groups["Connection"]:
     multi_target_vars[label] = tk.BooleanVar(master=root, value=False)
 
-MODE_GROUPS = ["Experiments","LiDAR", "Vision", "Mapping", "Disassembly",
-               "Direct Thrust", "Tail", "Controllers", "Shapes"]
+MODE_GROUPS = ["Imaging Experiments","LiDAR", "Vision", "Mapping", "Disassembly",
+               "Direct Thrust", "Tail", "Controllers", "Shapes", "Chain Experiments"]
 
 right_side_started = False
 current_col = 0  # track which column we're placing into on row=0

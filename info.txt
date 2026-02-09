@@ -1,0 +1,143 @@
+String wonder(float program_params[])
+{
+  float distance_threshold  = program_params[1];
+  int wonder_mode           = program_params[2];
+  float k_base              = program_params[3];
+  float distance_exp        = program_params[4];
+  float position_exp        = program_params[5];
+  float torque_scale        = program_params[6];
+  float torque_max          = program_params[7];
+  float linear_scale        = program_params[8];
+  float linear_max          = program_params[9];
+  int   N_frames            = program_params[10];
+  float desired_thrust      = program_params[11];
+  float desired_depth       = program_params[12];
+
+
+  // if there is no obstacle, then maintain current heading
+  if(obstacleLeft[2] > 1.1 * distance_threshold && obstacleRight[2] > 1.1 * distance_threshold)
+  {
+    program_internal_counter = 0;
+    if (!program_internal_flag)
+    {
+      program_internal_flag = true;  // go into cruise mode
+      return ("[C," + String(desired_thrust,1) + ",0," + String(desired_depth,1) + "," + String(FC_yaw,1) + "]");
+    }
+    else
+    {
+      return "";
+    }
+  }
+  else
+  {
+    program_internal_counter += 1;
+    if(program_internal_counter >= N_frames)  // must have detected at least N frames to transition out of cruise mode
+    {
+      program_internal_flag = false; // detected obstacle; switch from cruise to avoidance
+    }
+    else
+    {
+      return "";                     // ignore detection, certaintly threshold not met
+    }
+  }
+
+  //////////////////////////////////////////////////////////// obstacle detected -> evasive manuever
+  // left LiDAR
+  float u_L = 0.0;
+  if(obstacleLeft[2] < distance_threshold)
+  {
+    float a_L   = (distance_threshold - min(obstacleLeft[2], distance_threshold)) / distance_threshold; // obstacle distance weight
+    float b_L   = obstacleLeft[1] / 3.0;                                                                // obstacle position weight
+    a_L = constrain(a_L, 0.0f, 1.0f);
+    b_L = constrain(b_L, 0.0f, 1.0f);
+
+    float dist_term = powf(a_L, distance_exp);
+    float pos_term  = powf(b_L, position_exp);
+
+    u_L = dist_term * (k_base + (1.0 - k_base) * pos_term);                                             // resultant turn signal
+  }
+
+  //right LiDAR
+  float u_R = 0.0;
+  if(obstacleRight[2] < distance_threshold)
+  {
+    float a_R   = (distance_threshold - min(obstacleRight[2], distance_threshold)) / distance_threshold; // obstacle distance weight
+    float b_R   = (3 - obstacleRight[1]) / 3.0;                                                          // obstacle position weight
+    a_R = constrain(a_R, 0.0f, 1.0f);
+    b_R = constrain(b_R, 0.0f, 1.0f);
+    float dist_term = powf(a_R, distance_exp);
+    float pos_term  = powf(b_R, position_exp);
+
+    u_R = dist_term * (k_base + (1.0 - k_base) * pos_term);                                              // resultant turn signal
+  }
+
+  float tau_res = 0.0;
+  float f_fwd   = 0.0;
+  if(wonder_mode == 1)
+  {
+    tau_res   = torque_scale * (u_R - u_L);                       // turning torque
+    f_fwd     = desired_thrust - ((u_R + u_L) * linear_scale);    // thrust force
+  }
+  else if(wonder_mode == 2)
+  {
+    if (u_R > u_L)
+    {
+      tau_res = torque_scale * u_R;
+    }
+    else
+    {
+      tau_res = - torque_scale * u_L;
+    }
+    f_fwd     = desired_thrust - ((u_R + u_L) * linear_scale);    // thrust force
+  }
+
+  tau_res = constrain(tau_res,  -torque_max, torque_max);
+  f_fwd   = constrain(f_fwd,    -linear_max, linear_max);
+
+  return ("[dC," + String(f_fwd,1) + "," + "0" + "," + String(desired_depth,1) + "," + String(tau_res,1) + "]");
+}
+
+String wall_follow_left(float program_params[])
+{
+  float distance_threshold  = program_params[1];
+  int wonder_mode           = program_params[2];
+  float k_base              = program_params[3];
+  float distance_exp        = program_params[4];
+  float position_exp        = program_params[5];
+  float torque_scale        = program_params[6];
+  float torque_max          = program_params[7];
+  float linear_scale        = program_params[8];
+  float linear_max          = program_params[9];
+  float goal_distance       = program_params[10];
+  float goal_direction      = program_params[11];
+  float desired_thrust      = program_params[12];
+  float desired_depth       = program_params[13];
+
+  //////////////////////////////////////////////////////////// obstacle detected -> evasive manuever
+  // left LiDAR
+  float u_L = 0.0;
+  float a_L   = goal_distance - ((distance_threshold - min(obstacleLeft[2], distance_threshold)) / distance_threshold); // obstacle distance weight
+  float b_L   = goal_direction - (obstacleLeft[1] / 3.0);                                                               // obstacle position weight
+  a_L = constrain(a_L, 0.0f, 1.0f);
+  b_L = constrain(b_L, 0.0f, 1.0f);
+
+  float dist_term = powf(a_L, distance_exp);
+  float pos_term  = powf(b_L, position_exp);
+
+  u_L = dist_term * (k_base + (1.0 - k_base) * pos_term);
+
+  float u_R = 0;
+
+  float tau_res = 0.0;
+  float f_fwd   = 0.0;
+  if(wonder_mode == 1)
+  {
+    tau_res   = torque_scale * (u_R - u_L);                       // turning torque
+    f_fwd     = desired_thrust - ((u_R + u_L) * linear_scale);    // thrust force
+  }
+
+  tau_res = constrain(tau_res,  -torque_max, torque_max);
+  f_fwd   = constrain(f_fwd,    -linear_max, linear_max);
+
+  return ("[dC," + String(f_fwd,1) + "," + "0" + "," + String(desired_depth,1) + "," + String(tau_res,1) + "]");
+}
