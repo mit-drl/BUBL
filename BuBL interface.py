@@ -605,13 +605,13 @@ button_groups = {
         ("Record Power", "[R,3,50]"),
     ],
     "Imaging Experiments": [
-        ("Image HQ", "[O,8,1,10,0.5]"),
-        ("Image FS", "[O,5,1,10,0.5]"),
+        ("10 Image HQ", "[O,8,1,10,0.5]"),
         ("One Image", "[O,8,1,1,0.5]"),
         ("Record Gyro", "[R,6,50]"),
         ("Stop Recording", "[R,0,1]"),
         ("Collect Data", "[Q,1]"),
         ("Stop Collect", "[Q,0]"),
+        ("Slow Rotate", "[dC,0,0,0,0.1]"),
     ],
     "Chain Experiments": [
         ("Steer Front", "[A,7,-5,0,0]"),
@@ -673,7 +673,9 @@ button_groups = {
     ],
 
     "ICRA26": [
-        ("Forward", "[C,500,0,0,0]"),
+        ("Forward 300", "[C,300,0,0,0]"),
+        ("Forward 500", "[C,500,0,0,0]"),
+        ("Forward 700", "[C,700,0,0,0]"),
         ("1 robot", "[N,1 robot]"),
         ("2 robot", "[N,2 robot]"),
         ("3 robot", "[N,3 robot]"),
