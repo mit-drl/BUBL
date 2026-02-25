@@ -778,7 +778,7 @@ multi_target_vars = {}
 for label, _cmd in button_groups["Connection"]:
     multi_target_vars[label] = tk.BooleanVar(master=root, value=False)
 
-MODE_GROUPS = ["Imaging Experiments","LiDAR", "Vision", "Mapping", "Disassembly",
+MODE_GROUPS = ["Imaging Experiments","LiDAR", "Vision", "Disassembly",
                "Direct Thrust", "Tail", "Controllers", "Shapes", "Chain Experiments", "ICRA26", "IROS26"]
 
 right_side_started = False
