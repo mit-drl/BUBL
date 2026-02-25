@@ -14,6 +14,39 @@ import matplotlib.image as mpimg
 import time
 import matplotlib as mpl
 
+import os, time, queue, threading
+
+# Put log next to this script file, not the process working dir
+BASE_DIR = os.path.dirname(os.path.abspath(__file__)) if "__file__" in globals() else os.getcwd()
+LOG_PATH = os.path.join(BASE_DIR, "bubl_stream_log.txt")
+
+log_queue = queue.Queue(maxsize=200_000)
+
+def logger_thread():
+    print(f"[LOGGER] writing to: {LOG_PATH}")
+    with open(LOG_PATH, "a", buffering=1_048_576, encoding="utf-8", errors="ignore", newline="\n") as f:
+        batch = []
+        last_flush = time.perf_counter()
+
+        FLUSH_EVERY_S = 0.5
+        FLUSH_LINES   = 2000
+
+        while True:
+            try:
+                line = log_queue.get(timeout=0.2)
+                batch.append(line)
+            except queue.Empty:
+                pass
+
+            now = time.perf_counter()
+            if batch and (len(batch) >= FLUSH_LINES or (now - last_flush) >= FLUSH_EVERY_S):
+                f.write("\n".join(batch) + "\n")
+                f.flush()  # <-- important for “I see it on disk now”
+                batch.clear()
+                last_flush = now
+
+threading.Thread(target=logger_thread, daemon=True).start()
+
 mpl.rcParams.update({
     "font.size": 8,
     "axes.titlesize": 9,
@@ -58,6 +91,12 @@ def serial_reader():
                 s = line.strip().decode('utf-8', errors='ignore')
                 if s:
                     serial_queue.put(s)
+
+                    # log without ever blocking the reader
+                    try:
+                        log_queue.put_nowait(f"{time.time():.3f},{s}")  # timestamp,data
+                    except queue.Full:
+                        pass  # drop log lines rather than slowing anything down
 
             if len(buf) > MAX_BUF:
                 buf.clear()
