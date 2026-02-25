@@ -732,10 +732,12 @@ button_groups = {
     ],
 
     "IROS26": [
-        ("Wonder 0cm", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,200,15]"),
-        ("Mapping 0cm 3s", "[A,2,400,800,150,600,400,2,30,12,3,0.5,200,0]"),
-        ("HQ Imaging", "[O,8,0.5,0,0.1]"),
-        ("LQ Imaging", "[O,8,0.5,0,0.3]"),
+        ("Wonder 15cm", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,600,15]"),
+        ("Wonder 50cm", "[A,3,400,1,1.0,1.0,1.0,800,150,600,400,2,600,50]"),
+        ("Collect Data", "[Q,1]"),
+        ("HQ Imaging", "[O,8,0.5,1000,0.1]"),
+        ("Stop Imaging", "[O,8,0.5,0,0.1]"),
+        ("Stop Program", "[A,0]\n[C,0,0,0]\n[H]"),
     ],
 
     "Vision": [
@@ -777,7 +779,7 @@ for label, _cmd in button_groups["Connection"]:
     multi_target_vars[label] = tk.BooleanVar(master=root, value=False)
 
 MODE_GROUPS = ["Imaging Experiments","LiDAR", "Vision", "Mapping", "Disassembly",
-               "Direct Thrust", "Tail", "Controllers", "Shapes", "Chain Experiments", "ICRA26"]
+               "Direct Thrust", "Tail", "Controllers", "Shapes", "Chain Experiments", "ICRA26", "IROS26"]
 
 right_side_started = False
 current_col = 0  # track which column we're placing into on row=0
